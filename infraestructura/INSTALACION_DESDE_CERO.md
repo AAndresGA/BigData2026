@@ -25,7 +25,7 @@ Dejar funcionando:
 2. Instalar WSL2 en PowerShell (admin):
 
 ```powershell
-wsl --install
+wsl --install -d Ubuntu
 ```
 
 3. Reiniciar equipo.
