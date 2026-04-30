@@ -42,9 +42,9 @@ def build_cells():
                 "0. Crear cuenta en Databricks y conocer la plataforma",
                 "1. Por que Spark y por que Databricks",
                 "2. Hadoop, YARN y el lugar de Spark",
-                "3. Que puede salir mal",
-                "4. Preparacion del entorno y dataset",
-                "5. Modelo mental de Spark",
+                "3. Preparacion del entorno y dataset",
+                "4. Modelo mental de Spark",
+                "5. Que puede salir mal",
                 "6. Spark SQL como puente para analitica",
                 "7. Pandas vs Dask vs PySpark",
                 "8. Delta Lake en la practica",
@@ -101,6 +101,134 @@ def build_cells():
             > Importante: aunque Community Edition se llame "cluster", en esta modalidad no estamos
             > simulando un entorno multinodo completo. Lo usamos porque reduce friccion y permite
             > aprender Spark con menos problemas operativos que Colab.
+            """
+        ),
+        md(
+            """
+            ## Que es un cluster y que significa `Single Node`
+
+            Antes de avanzar, conviene aclarar una palabra que aparece todo el tiempo en Spark:
+            **cluster**.
+
+            Un **cluster** es un conjunto de maquinas que trabajan juntas para ejecutar tareas y procesar datos.
+            En Spark, la idea general es que el trabajo no lo haga una sola maquina aislada, sino varias maquinas
+            coordinadas:
+
+            - una coordina el trabajo,
+            - otras ejecutan tareas,
+            - y entre todas procesan mas datos y mas rapido que una sola maquina.
+
+            Un **nodo** es simplemente una maquina dentro de ese sistema.
+
+            En Spark, un cluster normalmente tiene:
+
+            - **Driver**: coordina el trabajo, construye el plan de ejecucion y reparte tareas.
+            - **Executors**: ejecutan las tareas y procesan los datos.
+            - **Cluster manager**: administra recursos y decide donde corre cada cosa.
+
+            ### Entonces, que significa `Single Node`?
+
+            `Single Node` significa que todo corre en **una sola maquina**.
+
+            Es decir:
+
+            - el driver esta en esa maquina,
+            - los executors tambien,
+            - no hay varias maquinas repartiendo el trabajo de verdad.
+
+            Sigue siendo Spark, pero no es un cluster distribuido real entre varios nodos.
+
+            ### Por que usar `Single Node` entonces?
+
+            Porque sirve muy bien para:
+
+            - aprender la API de Spark,
+            - practicar `DataFrame`, `groupBy`, `join`, `sql`,
+            - ver jobs, stages y tasks,
+            - usar Databricks con menos complejidad,
+            - reducir costos y friccion.
+
+            ### Que pierde frente a un cluster real?
+
+            Pierde sobre todo:
+
+            - escalamiento real entre varias maquinas,
+            - comportamiento de red entre nodos,
+            - distribucion fisica autentica,
+            - ventajas completas de paralelismo multinodo.
+
+            > Idea clave: `Single Node` no reemplaza un cluster real, pero si es un muy buen laboratorio para aprender Spark.
+            """
+        ),
+        md(
+            """
+            ## Databricks Community Edition no es solo otro Colab
+
+            A primera vista, Databricks Community Edition puede parecerse a Colab porque ambos son:
+
+            - notebooks en la nube,
+            - interactivos,
+            - comodos para ensenar,
+            - sin demasiada instalacion local.
+
+            Pero pedagogicamente no cumplen el mismo papel.
+
+            ### Colab
+
+            Colab esta pensado como un entorno general para:
+
+            - Python,
+            - notebooks,
+            - ML basico,
+            - Pandas,
+            - visualizacion,
+            - prototipos rapidos.
+
+            Spark en Colab normalmente:
+
+            - no es la experiencia nativa,
+            - suele correr en modo local o semiartesanal,
+            - no ensena tan bien la logica operacional de Spark,
+            - no esta centrado en jobs, stages, tasks, storage, tablas ni Delta.
+
+            ### Databricks Community Edition
+
+            Databricks Community Edition esta pensado especificamente para:
+
+            - Spark,
+            - Spark SQL,
+            - notebooks de datos,
+            - tablas,
+            - DBFS,
+            - Delta Lake,
+            - observabilidad con Spark UI.
+
+            Aunque Community Edition sea limitado, se diferencia de Colab en que:
+
+            - **Spark es ciudadano de primera clase**,
+            - el entorno esta disenado alrededor del motor,
+            - la UI y el flujo de trabajo ensenan mejor como se usa Spark en la practica,
+            - se parece mas al mundo real de data engineering.
+
+            ### Entonces, se parece a Colab?
+
+            Si, en la experiencia superficial.
+
+            Abres navegador, ejecutas celdas y trabajas en un notebook. En eso si se parecen.
+            Pero la diferencia profunda es esta:
+
+            - **Colab** ensena "programar y analizar".
+            - **Databricks** ensena mejor "trabajar con un motor de datos distribuido".
+
+            Colab es un muy buen cuaderno de laboratorio general.
+            Databricks Community Edition es un laboratorio mas especifico para Spark.
+
+            ### Lo importante para esta sesion
+
+            - Community Edition **no es produccion**.
+            - Community Edition **no reemplaza un cluster real multinodo**.
+            - Pero tampoco es simplemente "un Colab con otro nombre".
+            - Es una plataforma de aprendizaje donde Spark, SQL, storage y observabilidad estan mucho mas integrados.
             """
         ),
         code(
@@ -190,43 +318,198 @@ def build_cells():
             """
             ## Del ecosistema Hadoop a Spark
 
-            Spark no nacio en el vacio. Para entender por que existe, ayuda recordar tres piezas:
+            Antes de Spark, el mundo Big Data ya tenia una forma de trabajar con datos grandes: **Hadoop**.
+
+            Pero Hadoop no era "una sola herramienta". En realidad, era un ecosistema de componentes pensado
+            para resolver una pregunta muy concreta:
+
+            > "Si mis datos ya no caben en una sola maquina, como los guardo, como los proceso y como organizo los recursos para hacerlo?"
+
+            Para responder esa pregunta, conviene separar tres piezas clave:
 
             - **HDFS**: almacenamiento distribuido para archivos grandes.
             - **MapReduce**: modelo de computacion distribuida clasico de Hadoop.
             - **YARN**: capa de administracion de recursos y ejecucion de aplicaciones.
 
-            ### Intuicion historica
+            Si entiendes que hacia cada una, entiendes mucho mejor por que Spark aparecio despues y por que tuvo tanta adopcion.
 
-            Hadoop resolvio muy bien el problema de almacenar y procesar datos grandes en clusters baratos.
-            Pero su modelo clasico de **MapReduce** tenia un costo alto en trabajos iterativos y pipelines
-            con muchas etapas, porque escribia mucho a disco entre pasos.
+            ---
 
-            Spark aparece como una evolucion importante porque:
+            ## 1. HDFS: donde viven los datos
 
-            - mantiene la idea de computacion distribuida,
-            - aprovecha memoria de forma mucho mas agresiva,
-            - ofrece una API de mas alto nivel,
-            - integra SQL, ML y streaming bajo un mismo motor.
+            **HDFS** significa **Hadoop Distributed File System**.
+            Su funcion principal es el **almacenamiento distribuido**.
 
-            ### Donde entra YARN
+            En lugar de guardar un archivo gigantesco en una sola maquina, HDFS:
 
-            YARN no "es Spark". YARN es un **administrador de recursos**: decide donde correr aplicaciones,
-            que recursos reciben y como conviven multiples trabajos en un cluster.
+            - divide el archivo en bloques,
+            - reparte esos bloques entre varias maquinas,
+            - y guarda copias para tolerar fallos.
 
-            En produccion, Spark puede ejecutarse sobre:
-            - YARN
-            - Kubernetes
-            - Standalone cluster manager
-            - plataformas gestionadas como Databricks
+            Eso significa que un archivo muy grande no vive completo en un solo disco, sino repartido en varias partes del cluster.
 
-            En esta sesion usaremos Databricks para bajar friccion operativa, pero el modelo mental sigue siendo:
-            **datos distribuidos + ejecucion distribuida + planificacion de recursos**.
-            """
-        ),
-        md(
-            """
-            ## Que idea debes llevarte
+            ### Por que eso era importante?
+
+            Porque en Big Data el primer problema no es solo "procesar mucho", sino **guardar mucho de forma confiable**.
+            Si una maquina falla, no quieres perder todos los datos.
+
+            ### Idea clave
+
+            - **HDFS no procesa datos**
+            - **HDFS almacena datos**
+
+            > **HDFS = sistema de archivos distribuido**
+
+            ---
+
+            ## 2. MapReduce: como se procesaban esos datos
+
+            Una vez que los datos estaban almacenados en HDFS, hacia falta procesarlos.
+            Ahi entra **MapReduce**, que fue el modelo clasico de computacion de Hadoop.
+
+            La idea general era:
+
+            - dividir el trabajo en partes pequenas,
+            - enviar esas partes a varias maquinas,
+            - procesarlas en paralelo,
+            - y luego combinar los resultados.
+
+            Por eso se habla de dos fases principales:
+
+            - **Map**: transformar datos o emitir pares clave-valor
+            - **Reduce**: agrupar y combinar resultados
+
+            ### Ejemplo simple
+
+            Si quieres contar palabras en millones de documentos:
+
+            - en la fase **Map**, cada nodo cuenta palabras en su fragmento,
+            - en la fase **Reduce**, se combinan los conteos para obtener el total global.
+
+            ### Idea clave
+
+            - **MapReduce si procesa datos**
+            - pero lo hace con un modelo mas rigido y mas pesado que lo que vino despues
+
+            ---
+
+            ## 3. Que limitacion tenia MapReduce?
+
+            MapReduce fue muy importante historicamente, pero tenia una limitacion fuerte:
+
+            > dependia mucho de escribir y leer datos intermedios en disco entre etapas.
+
+            Eso significa que si un trabajo tenia varios pasos, el flujo tipico se parecia a esto:
+
+            1. leer datos,
+            2. procesar,
+            3. escribir resultado intermedio a disco,
+            4. volver a leer,
+            5. volver a procesar,
+            6. volver a escribir.
+
+            Esto funcionaba, pero era costoso.
+
+            Se volvia especialmente pesado en:
+
+            - algoritmos iterativos,
+            - machine learning,
+            - pipelines largos de transformacion,
+            - analisis interactivo,
+            - procesos donde el mismo dataset se reutiliza varias veces.
+
+            ### Idea clave
+
+            MapReduce resolvia el problema de procesar datos grandes, pero podia volverse **lento y pesado**
+            cuando el trabajo tenia muchos pasos o mucha iteracion.
+
+            ---
+
+            ## 4. Ahi aparece Spark
+
+            **Spark** aparece como una evolucion importante de ese modelo.
+
+            No porque Hadoop fuera "malo", sino porque empezaron a ser mas comunes problemas que pedian:
+
+            - mas velocidad,
+            - mas flexibilidad,
+            - menos dependencia del disco,
+            - APIs mas comodas,
+            - mas facilidad para construir pipelines complejos.
+
+            Spark mantiene la idea de fondo:
+
+            - datos grandes,
+            - multiples maquinas,
+            - procesamiento distribuido,
+
+            pero cambia mucho la forma de ejecutar.
+
+            ### Como mejora Spark a MapReduce?
+
+            La mejora no es solo que Spark sea "mas nuevo". La diferencia importante esta en **como ejecuta los trabajos**,
+            **como maneja los datos intermedios** y **que tan flexible es para construir pipelines**.
+
+            - **Menos dependencia del disco**: Spark intenta mantener mucho mas trabajo en memoria.
+            - **Mejor para trabajos iterativos**: penaliza menos repetir operaciones sobre los mismos datos.
+            - **Pipelines mas flexibles**: no obliga a pensar todo como `Map` y `Reduce`.
+            - **Un solo motor para varios estilos de trabajo**: batch, SQL, ML y streaming.
+            - **Mejor experiencia de desarrollo**: DataFrames y SQL son mucho mas expresivos.
+            - **Mejor observabilidad**: la Spark UI permite entender mejor que esta pasando.
+
+            ### Idea clave
+
+            - **MapReduce** = modelo clasico, robusto, pero mas rigido y costoso
+            - **Spark** = motor mas moderno, flexible y eficiente para muchos casos
+
+            ---
+
+            ## 5. YARN: quien organiza los recursos
+
+            Aqui suele aparecer una confusion muy comun:
+
+            - **YARN no es Spark**
+            - **YARN no es HDFS**
+            - **YARN no procesa datos directamente**
+
+            **YARN** sirve para **administrar recursos del cluster**.
+            Su trabajo es decidir cosas como:
+
+            - que aplicacion corre,
+            - en que maquinas corre,
+            - cuanta memoria recibe,
+            - cuantos CPU recibe,
+            - como conviven varios trabajos al mismo tiempo.
+
+            En otras palabras:
+
+            - **HDFS** guarda los datos
+            - **MapReduce o Spark** procesan los datos
+            - **YARN** organiza los recursos para que eso ocurra
+
+            > **YARN = administrador de recursos**
+
+            ---
+
+            ## 6. Como pensar esto en Databricks
+
+            Aunque en Databricks no montes Hadoop manualmente, la logica conceptual sigue siendo la misma.
+            En Big Data siempre aparecen tres problemas distintos:
+
+            1. **Donde viven los datos**
+            2. **Quien los procesa**
+            3. **Quien administra los recursos**
+
+            En el ecosistema clasico eso se veia asi:
+
+            - **HDFS**: almacenamiento
+            - **MapReduce / Spark**: procesamiento
+            - **YARN**: administracion de recursos
+
+            En plataformas modernas como Databricks, muchas de esas piezas estan mas integradas o abstraidas,
+            pero el problema de fondo sigue siendo el mismo.
+
+            ### Que idea debes llevarte
 
             - **Hadoop** te da el contexto del problema Big Data.
             - **YARN** te muestra que ejecutar trabajos distribuidos requiere coordinar recursos.
@@ -234,46 +517,7 @@ def build_cells():
             - **Databricks** es la plataforma que nos permite practicarlo con menos dolor.
             """
         ),
-        section_header("3", "Que puede salir mal"),
-        md(
-            """
-            ## Anti-patrones y problemas tipicos
-
-            Aprender Spark sin hablar de fallos reales deja una vision incompleta. Estos son errores comunes:
-
-            1. **`collect()` o `toPandas()` demasiado pronto**: traes todo al driver y pierdes la ventaja distribuida.
-            2. **`repartition(1)` por comodidad**: fuerzas a un solo task y conviertes el pipeline en cuello de botella.
-            3. **Python UDFs innecesarias**: cada fila cruza Python/JVM y el trabajo se vuelve mucho mas lento.
-            4. **Shuffles invisibles**: `groupBy`, `join`, `distinct`, `orderBy` suelen disparar redistribucion de datos.
-            5. **Skew**: una clave concentra demasiadas filas y un task queda haciendo casi todo el trabajo.
-            6. **Cache sin criterio**: llenar memoria con DataFrames que usas una sola vez.
-            7. **Comparaciones injustas**: medir Spark contra Pandas sin contar tiempo de lectura, sin mismas operaciones o sin materializar resultados.
-            """
-        ),
-        code(
-            """
-            print("Checklist mental antes de ejecutar un pipeline Spark:")
-            print("1. Donde ocurre la ACTION que dispara el job?")
-            print("2. Hay joins, groupBy u orderBy que provoquen shuffle?")
-            print("3. Estoy moviendo datos al driver sin necesidad?")
-            print("4. Estoy usando funciones nativas o Python UDFs?")
-            print("5. El numero de particiones tiene sentido para este cluster?")
-            """
-        ),
-        md(
-            """
-            ## Que mirar en la Spark UI
-
-            Cuando una celda corra mas lento de lo esperado, revisa:
-
-            - **Jobs**: cuantos jobs disparaste realmente.
-            - **Stages**: donde empieza el shuffle.
-            - **Tasks**: si hay una particion mucho mas lenta que las otras.
-            - **SQL/DataFrame tab**: plan fisico, exchange, broadcast, sort merge join.
-            - **Storage tab**: que se cacheo en memoria y con que tamano.
-            """
-        ),
-        section_header("4", "Preparacion del entorno y dataset"),
+        section_header("3", "Preparacion del entorno y dataset"),
         md(
             """
             Usaremos el dataset publico de **NYC Yellow Taxi 2023-01**, suficientemente grande para mostrar
@@ -326,7 +570,7 @@ def build_cells():
             print("- cuanto tardo la lectura")
             """
         ),
-        section_header("5", "Modelo mental de Spark"),
+        section_header("4", "Modelo mental de Spark"),
         md(
             """
             ## Transformations vs Actions
@@ -496,6 +740,45 @@ def build_cells():
             - spills, skew, `collect()` temprano o `repartition(1)`: sintomas clasicos de problemas de diseno.
 
             Aprender a reconocer estas senales es parte fundamental de usar Spark correctamente.
+            """
+        ),
+        section_header("5", "Que puede salir mal"),
+        md(
+            """
+            ## Anti-patrones y problemas tipicos
+
+            Aprender Spark sin hablar de fallos reales deja una vision incompleta. Estos son errores comunes:
+
+            1. **`collect()` o `toPandas()` demasiado pronto**: traes todo al driver y pierdes la ventaja distribuida.
+            2. **`repartition(1)` por comodidad**: fuerzas a un solo task y conviertes el pipeline en cuello de botella.
+            3. **Python UDFs innecesarias**: cada fila cruza Python/JVM y el trabajo se vuelve mucho mas lento.
+            4. **Shuffles invisibles**: `groupBy`, `join`, `distinct`, `orderBy` suelen disparar redistribucion de datos.
+            5. **Skew**: una clave concentra demasiadas filas y un task queda haciendo casi todo el trabajo.
+            6. **Cache sin criterio**: llenar memoria con DataFrames que usas una sola vez.
+            7. **Comparaciones injustas**: medir Spark contra Pandas sin contar tiempo de lectura, sin mismas operaciones o sin materializar resultados.
+            """
+        ),
+        code(
+            """
+            print("Checklist mental antes de ejecutar un pipeline Spark:")
+            print("1. Donde ocurre la ACTION que dispara el job?")
+            print("2. Hay joins, groupBy u orderBy que provoquen shuffle?")
+            print("3. Estoy moviendo datos al driver sin necesidad?")
+            print("4. Estoy usando funciones nativas o Python UDFs?")
+            print("5. El numero de particiones tiene sentido para este cluster?")
+            """
+        ),
+        md(
+            """
+            ## Que mirar en la Spark UI
+
+            Cuando una celda corra mas lento de lo esperado, revisa:
+
+            - **Jobs**: cuantos jobs disparaste realmente.
+            - **Stages**: donde empieza el shuffle.
+            - **Tasks**: si hay una particion mucho mas lenta que las otras.
+            - **SQL/DataFrame tab**: plan fisico, exchange, broadcast, sort merge join.
+            - **Storage tab**: que se cacheo en memoria y con que tamano.
             """
         ),
         section_header("6", "Spark SQL como puente para analitica"),
