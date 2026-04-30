@@ -383,9 +383,119 @@ def build_cells():
             """
             ## Senales de que un paso puede ser caro
 
-            - `Exchange` en `explain()` sugiere shuffle.
-            - `SortMergeJoin` suele ser mas caro que `BroadcastHashJoin` para tablas pequenas de referencia.
-            - `PythonUDF` en el plan es una bandera de costo.
+            Cuando trabajamos con Spark, una transformacion puede verse simple en el codigo, pero ser costosa
+            en la ejecucion real. Por eso no basta con leer el notebook: tambien hay que revisar el
+            **plan de ejecucion** con `explain()` y la **Spark UI**.
+
+            Estas son algunas senales importantes:
+
+            ### `Exchange` en `explain()`
+
+            Si en el plan aparece `Exchange`, normalmente significa que Spark necesita
+            **redistribuir datos entre particiones**.
+
+            Eso suele ocurrir en operaciones como:
+
+            - `groupBy`
+            - `join`
+            - `distinct`
+            - `orderBy`
+
+            Este movimiento de datos entre nodos o entre particiones se conoce como **shuffle**, y suele ser
+            una de las partes mas costosas de Spark porque implica:
+
+            - mover datos por red,
+            - escribir y leer datos intermedios,
+            - esperar a que varias tareas terminen antes de continuar.
+
+            > Regla practica: si aparece `Exchange`, preguntate si estas provocando un shuffle y si realmente es necesario.
+
+            ### `SortMergeJoin`
+
+            Cuando Spark usa `SortMergeJoin`, normalmente esta resolviendo un `join` entre tablas grandes o medianas.
+            Este tipo de join puede ser costoso porque requiere:
+
+            - redistribuir datos por clave,
+            - ordenar datos en ambos lados,
+            - coordinar mas trabajo entre particiones.
+
+            No siempre es malo: muchas veces es la estrategia correcta.
+            Pero si una de las tablas es pequena, puede ser mejor un **`BroadcastHashJoin`**, porque Spark envia
+            esa tabla pequena a cada executor y evita gran parte del shuffle.
+
+            > Idea clave: si una tabla es de referencia y cabe razonablemente en memoria, un broadcast join suele ser mucho mas eficiente.
+
+            ### `BroadcastHashJoin`
+
+            Este join suele ser una buena senal cuando una de las tablas es pequena.
+            Spark replica esa tabla pequena en los executors y hace el cruce localmente, en vez de redistribuir ambas tablas.
+
+            Ventajas:
+
+            - menos trafico por red,
+            - menos shuffle,
+            - menos costo de ordenamiento,
+            - mejor tiempo de respuesta en muchos casos.
+
+            Aun asi, no todo deberia hacerse con broadcast. Si la tabla "pequena" en realidad no lo es tanto,
+            puedes generar presion de memoria.
+
+            ### `PythonUDF` en el plan
+
+            Si aparece `PythonUDF`, es una senal de alerta.
+            Eso significa que parte de la logica sale del motor optimizado de Spark y pasa por Python, lo cual
+            introduce costos de:
+
+            - serializacion,
+            - deserializacion,
+            - cruce entre JVM y Python,
+            - menor capacidad de optimizacion por parte de Spark.
+
+            En muchos casos, una `PythonUDF` sera mas lenta que una expresion nativa con funciones de
+            `pyspark.sql.functions`.
+
+            Por eso, antes de usar una UDF, conviene preguntarse:
+
+            - esto se puede expresar con `F.when`, `F.col`, `F.regexp_extract`, `F.concat`, `F.date_format`, etc.?
+            - puedo evitar logica fila por fila en Python?
+            - una `pandas_udf` seria mejor que una UDF tradicional?
+
+            > Regla de oro: primero intenta resolver el problema con funciones nativas de Spark; usa UDFs solo cuando realmente no haya una alternativa razonable.
+
+            ### Otras pistas utiles
+
+            Ademas de las tres senales anteriores, conviene estar atento a estos sintomas:
+
+            - **Muchos stages** para una operacion que parecia sencilla.
+            - **Tasks muy desbalanceadas**: algunas terminan rapido y una o dos tardan muchisimo.
+            - **Spill a disco**: senal de que falto memoria para procesar en RAM.
+            - **`collect()` o `toPandas()`** en un punto temprano del pipeline.
+            - **`repartition(1)`** sin una razon fuerte.
+            - **`orderBy` global** sobre datasets grandes, especialmente si no era estrictamente necesario.
+
+            ### Que hacer cuando detectas estas senales
+
+            Si ves alguna de estas banderas, no significa automaticamente que el codigo este mal, pero si que vale la pena revisar:
+
+            1. si hay un shuffle evitable,
+            2. si puedes reducir columnas antes del join o del groupBy,
+            3. si puedes filtrar antes de una operacion costosa,
+            4. si conviene usar `broadcast`,
+            5. si una UDF puede reemplazarse por funciones nativas,
+            6. si el numero de particiones tiene sentido para el tamano de los datos y del cluster.
+
+            ### Resumen
+
+            Una transformacion en Spark puede ser costosa aunque el codigo parezca corto.
+            Las senales mas comunes son:
+
+            - `Exchange`: probablemente hay shuffle.
+            - `SortMergeJoin`: join potencialmente caro.
+            - `BroadcastHashJoin`: suele ser mejor para tablas pequenas.
+            - `PythonUDF`: alerta de sobrecosto por salir del motor nativo.
+            - spills, skew, `collect()` temprano o `repartition(1)`: sintomas clasicos de problemas de diseno.
+
+            Aprender a reconocer estas senales es parte fundamental de usar Spark correctamente.
             """
         ),
         section_header("6", "Spark SQL como puente para analitica"),
@@ -528,16 +638,194 @@ def build_cells():
             """
             ## Por que usar Spark en vez de Dask o Pandas
 
-            Spark no gana solo por velocidad. Tambien aporta:
+            Elegir Spark no significa que Pandas o Dask sean "malas" herramientas.
+            En realidad, las tres resuelven problemas distintos y tienen fortalezas diferentes. La ventaja
+            de Spark aparece con mas claridad cuando el problema deja de ser solo "hacer analisis" y pasa
+            a ser tambien **escalar, operar, monitorear y mantener pipelines de datos de forma confiable**.
 
-            - **Catalyst optimizer**: reescritura y optimizacion del plan.
-            - **Spark SQL**: motor muy util para equipos mixtos Python/SQL.
-            - **UI madura**: observabilidad nativa de jobs, stages y tasks.
-            - **Ecosistema operacional**: jobs, tablas, gobernanza, Delta, streaming.
-            - **Joins distribuidos robustos** y estrategias como broadcast join.
+            ### Spark no gana solo por velocidad
 
-            Dask es muy valioso cuando quieres una transicion suave desde Pandas, pero para
-            pipelines de datos empresariales Spark suele ofrecer un camino mas estandarizado.
+            Muchas veces se piensa que Spark se usa unicamente porque "es mas rapido".
+            Eso es una simplificacion. En datasets pequenos o medianos, **Pandas puede ser incluso mas conveniente**
+            por su simplicidad, y en escenarios intermedios **Dask puede ofrecer una transicion muy comoda**
+            desde la API de Pandas.
+
+            La ventaja real de Spark esta en que combina:
+
+            - procesamiento distribuido,
+            - optimizacion automatica,
+            - herramientas maduras de observabilidad,
+            - un ecosistema robusto para produccion,
+            - y una forma mas estandarizada de construir pipelines analiticos a gran escala.
+
+            ### 1. `Catalyst optimizer`: Spark no solo ejecuta, tambien optimiza
+
+            Una de las mayores fortalezas de Spark es su optimizador interno, llamado **Catalyst**.
+            Cuando escribes una transformacion en DataFrames o Spark SQL, Spark no ejecuta literalmente el codigo
+            tal como lo escribiste: primero construye un plan logico y luego intenta **reescribirlo y optimizarlo**.
+
+            Eso le permite, entre otras cosas:
+
+            - empujar filtros lo mas temprano posible,
+            - eliminar columnas innecesarias,
+            - reorganizar partes del plan,
+            - elegir estrategias de join,
+            - reducir trabajo redundante.
+
+            En otras palabras, Spark no es solamente una libreria de transformacion de datos; tambien es un
+            **motor de ejecucion con capacidad de optimizacion**.
+
+            > En Pandas, en cambio, casi toda la responsabilidad de escribir una secuencia eficiente recae mucho mas directamente en quien programa.
+
+            ### 2. `Spark SQL`: un puente muy fuerte entre ingenieria y analitica
+
+            Otra gran ventaja es **Spark SQL**.
+            Spark no solo ofrece una API en Python o Scala, sino tambien un motor SQL muy potente. Esto tiene
+            varias implicaciones pedagogicas y profesionales:
+
+            - Personas con perfil analitico pueden trabajar en SQL sin dominar toda la API de PySpark.
+            - Equipos mixtos pueden colaborar mejor.
+            - Muchas transformaciones complejas se expresan de forma mas clara en SQL.
+            - Es mas facil conectar notebooks exploratorios con pipelines mas formales.
+
+            Esto hace que Spark sea especialmente util en organizaciones donde conviven:
+
+            - ingenieros de datos,
+            - analistas,
+            - cientificos de datos,
+            - equipos de BI.
+
+            ### 3. UI madura: observar la ejecucion es parte del aprendizaje
+
+            Una diferencia muy importante frente a Pandas, y tambien frente a muchos usos sencillos de Dask, es que
+            Spark ofrece una **interfaz madura de observabilidad**.
+
+            Con la **Spark UI** puedes ver:
+
+            - cuantos jobs se ejecutaron,
+            - cuantos stages produjo una celda,
+            - cuantos tasks corrieron,
+            - donde hubo shuffle,
+            - cuanto tiempo tomo cada parte,
+            - si hubo skew,
+            - si se derramo memoria a disco,
+            - que estrategia de join uso el motor.
+
+            Esto no es solo una ventaja tecnica: tambien es una ventaja pedagogica.
+            Permite enseÃ±ar que en sistemas distribuidos no basta con obtener el resultado correcto; tambien importa **como** se calculo ese resultado.
+
+            ### 4. Ecosistema operacional: Spark suele encajar mejor en produccion
+
+            Cuando un proyecto crece, el problema ya no es solo transformar datos, sino tambien operar procesos de
+            forma repetible y segura.
+
+            Ahi Spark suele ofrecer una ventaja clara porque encaja muy bien con un ecosistema de produccion que incluye:
+
+            - jobs programados,
+            - tablas gestionadas,
+            - integracion con catalogos y gobernanza,
+            - formatos modernos como Delta Lake,
+            - procesamiento batch y streaming,
+            - herramientas administradas como Databricks.
+
+            Esto hace que Spark sea frecuente en contextos empresariales donde importa:
+
+            - trazabilidad,
+            - reproducibilidad,
+            - control de cambios,
+            - monitoreo,
+            - escalabilidad futura.
+
+            Dask puede ser muy util y elegante para ciertos flujos, pero Spark suele ofrecer una ruta mas estandar
+            cuando el objetivo es construir **plataformas de datos** y no solo scripts de analisis.
+
+            ### 5. Joins distribuidos mas robustos
+
+            Los `join` son una de las operaciones mas criticas en datos a escala.
+            Cuando las tablas crecen, resolver joins de manera eficiente deja de ser trivial.
+
+            Spark ofrece varias estrategias maduras para esto, por ejemplo:
+
+            - `BroadcastHashJoin` cuando una tabla es pequena,
+            - `SortMergeJoin` para tablas grandes,
+            - optimizaciones automaticas segun estadisticas y plan.
+
+            Ademas, Spark permite inspeccionar el plan y ver que estrategia eligio. Eso es muy util para diagnosticar
+            rendimiento y para enseÃ±ar por que un join a veces explota en costo.
+
+            En Pandas, un join puede ser muy comodo, pero todo ocurre en la memoria local del proceso.
+            En Dask, los joins tambien existen, pero cuando la complejidad operacional crece, Spark suele dar mas
+            herramientas para entender y controlar el comportamiento.
+
+            ### 6. Spark fuerza un modelo mental util para Big Data
+
+            Pandas invita a pensar en un DataFrame local.
+            Eso es una gran ventaja para empezar, pero a escala puede ocultar ciertos costos.
+
+            Spark, en cambio, obliga mas temprano a pensar en preguntas como:
+
+            - cuando se ejecuta realmente el calculo?
+            - que operaciones causan shuffle?
+            - cuantas particiones hay?
+            - estoy moviendo datos al driver?
+            - puedo evitar una UDF?
+            - este `orderBy` realmente hace falta?
+
+            Ese cambio de mentalidad es muy valioso en cursos de Big Data, porque acerca al estudiante a la logica real
+            de los sistemas distribuidos.
+
+            ### 7. Delta Lake amplia el valor de Spark
+
+            En entornos como Databricks, Spark no aparece solo: suele venir acompaÃ±ado de **Delta Lake**, que agrega
+            capacidades como:
+
+            - transacciones ACID,
+            - historial de versiones,
+            - `MERGE` / upsert,
+            - rollback y restore,
+            - mayor confiabilidad para tablas analiticas.
+
+            Eso significa que Spark no solo ayuda a **procesar** datos, sino tambien a **gestionarlos mejor**
+            una vez que el pipeline entra en produccion.
+
+            ### Entonces, cuando elegir cada uno?
+
+            ### Usa Pandas cuando:
+
+            - los datos caben comodamente en memoria,
+            - necesitas explorar rapido,
+            - quieres la menor friccion posible,
+            - el objetivo es analisis local o prototipado.
+
+            ### Usa Dask cuando:
+
+            - quieres una API parecida a Pandas,
+            - los datos ya no caben tan bien en RAM,
+            - necesitas escalar un poco sin cambiar demasiado tu forma de trabajar,
+            - el problema sigue siendo mas analitico que operacional.
+
+            ### Usa Spark cuando:
+
+            - el volumen de datos crece de forma seria,
+            - necesitas joins, agregaciones o ETLs distribuidos con observabilidad,
+            - quieres una ruta mas estandar hacia produccion,
+            - el equipo combina SQL, notebooks y pipelines,
+            - necesitas tablas confiables, historial y gobierno del dato.
+
+            ### Resumen
+
+            Spark no siempre es la mejor herramienta para todo, pero si suele ser la mas solida cuando el problema combina:
+
+            - **escala**,
+            - **distribucion**,
+            - **operacion en produccion**,
+            - **observabilidad**,
+            - y **mantenimiento a largo plazo**.
+
+            Dask es muy valioso cuando quieres una transicion suave desde Pandas.
+            Pandas sigue siendo excelente para analisis local y exploracion rapida.
+            Pero cuando el objetivo ya no es solo analizar datos, sino construir pipelines robustos y sostenibles,
+            **Spark suele ofrecer un camino mas estandarizado y mas maduro**.
             """
         ),
         code(
