@@ -5,15 +5,10 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         <meta
             name="description"
-            content="Material del curso Big Data UCE de la Maestr&iacute;a en Anal&iacute;tica de Datos."
+            content="Material del curso Big Data UCE de la Maestría en Analítica de Datos."
         />
         <meta name="author" content="Antonino Zainea" />
-        <title>Big Data UCE - Maestr&iacute;a en Anal&iacute;tica de Datos</title>
-        <link rel="icon" type="image/x-icon" href="assets/favicon.ico" />
-        <link
-            href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css"
-            rel="stylesheet"
-        />
+        <title>Big Data UCE - Maestría en Analítica de Datos</title>
         <link
             href="https://fonts.googleapis.com/css?family=Merriweather+Sans:400,700"
             rel="stylesheet"
@@ -24,11 +19,71 @@
             type="text/css"
         />
         <link href="css/styles.css" rel="stylesheet" />
+        <style>
+            header.masthead {
+                background: linear-gradient(135deg, #17324d 0%, #355c7d 48%, #f4623a 100%);
+            }
+
+            .course-intro {
+                background: #f8f9fa;
+                padding: 4rem 0;
+            }
+
+            .course-card {
+                min-height: 100%;
+                display: block;
+                color: #212529;
+                text-decoration: none;
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 1.5rem;
+                transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+            }
+
+            .course-card:hover,
+            .course-card:focus {
+                color: #212529;
+                transform: translateY(-4px);
+                border-color: #f4623a;
+                box-shadow: 0 0.75rem 1.75rem rgba(33, 37, 41, 0.12);
+            }
+
+            .course-emoji {
+                font-size: 2.5rem;
+                line-height: 1;
+                margin-bottom: 1rem;
+            }
+
+            .course-category {
+                color: #f4623a;
+                font-family: "Merriweather Sans", sans-serif;
+                font-size: 0.78rem;
+                font-weight: 700;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+            }
+
+            .course-title {
+                margin-top: 0.35rem;
+                margin-bottom: 0.75rem;
+                font-family: "Merriweather Sans", sans-serif;
+                font-size: 1.1rem;
+                font-weight: 700;
+            }
+
+            .course-description {
+                margin-bottom: 0;
+                color: #5f6670;
+                font-size: 0.95rem;
+                line-height: 1.55;
+            }
+        </style>
     </head>
     <body id="page-top">
         <nav class="navbar navbar-expand-lg navbar-light fixed-top py-3" id="mainNav">
             <div class="container px-4 px-lg-5">
-                <a class="navbar-brand" href="#page-top">Big Data UCE - Maestr&iacute;a en Anal&iacute;tica de Datos</a>
+                <a class="navbar-brand" href="#page-top">Big Data UCE - Maestría en Analítica de Datos</a>
                 <button
                     class="navbar-toggler navbar-toggler-right"
                     type="button"
@@ -36,13 +91,13 @@
                     data-bs-target="#navbarResponsive"
                     aria-controls="navbarResponsive"
                     aria-expanded="false"
-                    aria-label="Alternar navegaci&oacute;n"
+                    aria-label="Alternar navegación"
                 >
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarResponsive">
                     <ul class="navbar-nav ms-auto my-2 my-lg-0">
-                        <li class="nav-item"><a class="nav-link" href="#portfolio">Tem&aacute;ticas</a></li>
+                        <li class="nav-item"><a class="nav-link" href="#portfolio">Temáticas</a></li>
                     </ul>
                 </div>
             </div>
@@ -52,182 +107,210 @@
             <div class="container px-4 px-lg-5 h-100">
                 <div class="row gx-4 gx-lg-5 h-100 align-items-center justify-content-center text-center">
                     <div class="col-lg-8 align-self-end">
+                        <div class="display-1 mb-3" aria-hidden="true">📊</div>
                         <h1 class="text-white font-weight-bold">Curso de Big Data</h1>
                         <hr class="divider" />
                     </div>
                     <div class="col-lg-8 align-self-baseline">
                         <p class="text-white-75 mb-5">
-                            En el contexto de la Maestr&iacute;a en Anal&iacute;tica de Datos, el curso de Big Data
-                            aborda el desaf&iacute;o de gestionar y aprovechar grandes vol&uacute;menes de informaci&oacute;n.
-                            El material introduce fundamentos de almacenamiento, procesamiento,
-                            visualizaci&oacute;n y arquitecturas de datos para resolver problemas reales en
-                            entornos empresariales y de investigaci&oacute;n.
+                            Material guiado para aprender almacenamiento, procesamiento distribuido,
+                            arquitectura de datos, Spark, Dask, Databricks y flujos analíticos aplicados.
+                            Cada tema incluye una descripción breve para ubicar rápidamente qué se estudia
+                            y por qué importa.
                         </p>
-                        <a class="btn btn-primary btn-xl" href="#portfolio">Tem&aacute;ticas</a>
+                        <a class="btn btn-primary btn-xl" href="#portfolio">Ver temáticas</a>
                     </div>
                 </div>
             </div>
         </header>
 
-        <div id="portfolio">
-            <div class="container-fluid p-0">
-                <div class="row g-0">
-                    <div class="col-lg-4 col-sm-6">
+        <section class="course-intro">
+            <div class="container px-4 px-lg-5 text-center">
+                <h2 class="mt-0">Temáticas del curso</h2>
+                <hr class="divider" />
+                <p class="text-muted mb-0">
+                    Los cuadernos están organizados como una ruta progresiva: fundamentos,
+                    arquitectura, procesamiento distribuido, herramientas de ingeniería de datos
+                    y laboratorios aplicados.
+                </p>
+            </div>
+        </section>
+
+        <section id="portfolio" class="py-5">
+            <div class="container px-4 px-lg-5">
+                <div class="row g-4">
+                    <div class="col-lg-4 col-md-6">
                         <a
-                            class="portfolio-box"
+                            class="course-card"
                             href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/sesion1_introducci_n.ipynb"
                             target="_blank"
                             rel="noopener noreferrer"
-                            title="Introducci&oacute;n al Big Data"
                         >
-                            <img
-                                class="img-fluid"
-                                src="assets/img/portfolio/thumbnails/1.jpg"
-                                alt="Portada de la sesi&oacute;n 1 del curso de Big Data"
-                            />
-                            <div class="portfolio-box-caption">
-                                <div class="project-category text-white-50">Big Data</div>
-                                <div class="project-name">1. Introducci&oacute;n al Big Data</div>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-lg-4 col-sm-6">
-                        <a
-                            class="portfolio-box"
-                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/2_Definiciones_gcp.ipynb"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Definiciones y GCP"
-                        >
-                            <img
-                                class="img-fluid"
-                                src="assets/img/portfolio/thumbnails/3.jpg"
-                                alt="Portada de la sesi&oacute;n 2 sobre definiciones y GCP"
-                            />
-                            <div class="portfolio-box-caption">
-                                <div class="project-category text-white-50">Big Data</div>
-                                <div class="project-name">2. Algunas definiciones y GCP</div>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-lg-4 col-sm-6">
-                        <a
-                            class="portfolio-box"
-                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/3_Arquitectura%20Big%20Data%20End-to-End.ipynb"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Arquitectura Big Data End-to-End"
-                        >
-                            <img
-                                class="img-fluid"
-                                src="assets/img/portfolio/thumbnails/sesion3.jpg"
-                                alt="Portada de la sesi&oacute;n 3 sobre arquitectura Big Data End-to-End"
-                            />
-                            <div class="portfolio-box-caption">
-                                <div class="project-category text-white-50">Big Data</div>
-                                <div class="project-name">3. Soluci&oacute;n empresarial End-to-End</div>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-lg-4 col-sm-6">
-                        <a
-                            class="portfolio-box"
-                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/4_etl_elt_.ipynb"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="ETL y ELT"
-                        >
-                            <img
-                                class="img-fluid"
-                                src="assets/img/portfolio/thumbnails/4_1.jpg"
-                                alt="Portada de la sesi&oacute;n 4 sobre ETL y ELT"
-                            />
-                            <div class="portfolio-box-caption">
-                                <div class="project-category text-white-50">Big Data</div>
-                                <div class="project-name">4. ETL/ELT</div>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-lg-4 col-sm-6">
-                        <a
-                            class="portfolio-box"
-                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/7_distribuido.ipynb"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Conceptos de almacenamiento para Big Data"
-                        >
-                            <img
-                                class="img-fluid"
-                                src="assets/img/portfolio/thumbnails/Distribuido.jpg"
-                                alt="Portada de la sesi&oacute;n 7 sobre almacenamiento distribuido"
-                            />
-                            <div class="portfolio-box-caption">
-                                <div class="project-category text-white-50">Big Data</div>
-                                <div class="project-name">7. Conceptos de almacenamiento para Big Data</div>
-                            </div>
+                            <div class="course-emoji" aria-hidden="true">🌐</div>
+                            <div class="course-category">Fundamentos</div>
+                            <div class="course-title">1. Introducción al Big Data</div>
+                            <p class="course-description">
+                                Presenta qué es Big Data, por qué surge y cómo se relaciona con volumen,
+                                velocidad, variedad, valor y toma de decisiones.
+                            </p>
                         </a>
                     </div>
 
-                    <div class="col-lg-4 col-sm-6">
+                    <div class="col-lg-4 col-md-6">
                         <a
-                            class="portfolio-box"
+                            class="course-card"
+                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/2_Definiciones_gcp.ipynb"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div class="course-emoji" aria-hidden="true">☁️</div>
+                            <div class="course-category">Nube</div>
+                            <div class="course-title">2. Definiciones y GCP</div>
+                            <p class="course-description">
+                                Revisa conceptos básicos de computación en la nube, servicios administrados
+                                y vocabulario necesario para leer arquitecturas modernas.
+                            </p>
+                        </a>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6">
+                        <a
+                            class="course-card"
+                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/3_Arquitectura%20Big%20Data%20End-to-End.ipynb"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div class="course-emoji" aria-hidden="true">🏗️</div>
+                            <div class="course-category">Arquitectura</div>
+                            <div class="course-title">3. Solución empresarial End-to-End</div>
+                            <p class="course-description">
+                                Conecta fuentes, ingesta, almacenamiento, procesamiento, gobierno y consumo
+                                para entender una solución Big Data completa.
+                            </p>
+                        </a>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6">
+                        <a
+                            class="course-card"
+                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/4_etl_elt_.ipynb"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div class="course-emoji" aria-hidden="true">🔄</div>
+                            <div class="course-category">Integración</div>
+                            <div class="course-title">4. ETL y ELT</div>
+                            <p class="course-description">
+                                Explica cómo se extraen, transforman y cargan datos, y cuándo conviene
+                                transformar antes o después de cargar.
+                            </p>
+                        </a>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6">
+                        <a
+                            class="course-card"
+                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/5_Computacion_distribuida_Hadoop_Spark_intro.ipynb"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div class="course-emoji" aria-hidden="true">🧩</div>
+                            <div class="course-category">Distribuido</div>
+                            <div class="course-title">5. Hadoop y Spark: introducción</div>
+                            <p class="course-description">
+                                Introduce el pensamiento distribuido: dividir trabajo, coordinar recursos
+                                y procesar datos más grandes que una sola máquina.
+                            </p>
+                        </a>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6">
+                        <a
+                            class="course-card"
+                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/7_distribuido.ipynb"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div class="course-emoji" aria-hidden="true">🗄️</div>
+                            <div class="course-category">Almacenamiento</div>
+                            <div class="course-title">6. Almacenamiento para Big Data</div>
+                            <p class="course-description">
+                                Trabaja conceptos de almacenamiento distribuido, particiones, formatos de
+                                archivo y decisiones que afectan rendimiento y costo.
+                            </p>
+                        </a>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6">
+                        <a
+                            class="course-card"
                             href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/prueba/Cuadernos/Dask.ipynb"
                             target="_blank"
                             rel="noopener noreferrer"
-                            title="Computaci&oacute;n Distribuida con Dask"
                         >
-                            <img
-                                class="img-fluid"
-                                src="assets/img/portfolio/thumbnails/dask.jpg"
-                                alt="Portada sobre Dask y computaci&oacute;n distribuida"
-                            />
-                            <div class="portfolio-box-caption">
-                                <div class="project-category text-white-50">Big Data</div>
-                                <div class="project-name">8. Dask - Computaci&oacute;n Distribuida 1</div>
-                            </div>
+                            <div class="course-emoji" aria-hidden="true">⚙️</div>
+                            <div class="course-category">Python distribuido</div>
+                            <div class="course-title">7. Dask</div>
+                            <p class="course-description">
+                                Presenta Dask como alternativa para escalar flujos de Python y Pandas
+                                usando particiones y ejecución paralela.
+                            </p>
                         </a>
                     </div>
-                    <div class="col-lg-4 col-sm-6">
+
+                    <div class="col-lg-4 col-md-6">
                         <a
-                            class="portfolio-box"
+                            class="course-card"
                             href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/Taller_2_Dask_SECOP.ipynb"
                             target="_blank"
                             rel="noopener noreferrer"
-                            title="Taller 2 - Dask SECOP"
                         >
-                            <img
-                                class="img-fluid"
-                                src="assets/img/portfolio/thumbnails/Taller2Dask.jpg"
-                                alt="Portada del Taller 2 - Dask SECOP"
-                            />
-                            <div class="portfolio-box-caption">
-                                <div class="project-category text-white-50">Big Data</div>
-                                <div class="project-name">9. Taller 2 - Dask SECOP</div>
-                            </div>
+                            <div class="course-emoji" aria-hidden="true">🧪</div>
+                            <div class="course-category">Taller aplicado</div>
+                            <div class="course-title">8. Taller Dask SECOP</div>
+                            <p class="course-description">
+                                Aplica Dask sobre datos públicos para practicar lectura, transformación,
+                                agregación y análisis exploratorio a mayor escala.
+                            </p>
                         </a>
                     </div>
-                    <div class="col-lg-4 col-sm-6">
+
+                    <div class="col-lg-4 col-md-6">
                         <a
-                            class="portfolio-box"
+                            class="course-card"
                             href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/7_Hadoop_YARN_Spark_Databricks.ipynb"
                             target="_blank"
                             rel="noopener noreferrer"
-                            title="Spark en Databricks"
                         >
-                            <img
-                                class="img-fluid"
-                                src="assets/img/portfolio/thumbnails/Distribuido.jpg"
-                                alt="Portada de la sesi&oacute;n sobre Spark en Databricks"
-                            />
-                            <div class="portfolio-box-caption">
-                                <div class="project-category text-white-50">Big Data</div>
-                                <div class="project-name">10. Spark en Databricks y Delta Lake</div>
-                            </div>
+                            <div class="course-emoji" aria-hidden="true">🔥</div>
+                            <div class="course-category">Spark</div>
+                            <div class="course-title">9. Hadoop, YARN, Spark y Databricks</div>
+                            <p class="course-description">
+                                Conecta el ecosistema Hadoop con Spark y Databricks para entender cómo
+                                se ejecuta procesamiento distribuido en plataformas modernas.
+                            </p>
+                        </a>
+                    </div>
+
+                    <div class="col-lg-4 col-md-6">
+                        <a
+                            class="course-card"
+                            href="https://colab.research.google.com/github/jazaineam1/BigData2026/blob/main/Cuadernos/9_Databricks_Serverless_Completo.ipynb"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <div class="course-emoji" aria-hidden="true">💎</div>
+                            <div class="course-category">Databricks</div>
+                            <div class="course-title">10. Databricks</div>
+                            <p class="course-description">
+                                Tutorial guiado de Databricks, PySpark, SQL, archivos locales, Parquet,
+                                Delta Lake, jobs y buenas prácticas de ejecución.
+                            </p>
                         </a>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
         <footer class="bg-light py-5">
             <div class="container px-4 px-lg-5">
@@ -237,6 +320,5 @@
 
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
         <script src="js/scripts.js"></script>
-        <script src="https://cdn.startbootstrap.com/sb-forms-latest.js"></script>
     </body>
 </html>
