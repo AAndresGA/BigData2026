@@ -229,17 +229,15 @@ def nombre_tabla(nombre):
             "Si hay Unity Catalog, conviene trabajar con tablas y Volumes gobernados.",
             "La funcion `nombre_tabla` permite usar dos o tres niveles segun el entorno."
         ]),
-        code("""
-# Instalar dependencias de apoyo
-# Regla Databricks moderna: usar %pip, no %sh pip.
-%pip install "dask[dataframe]>=2024.1" pyarrow -q
-        """),
         md("""
-## Advertencia comun
+## Nota sobre instalacion de librerias
 
-`%sh pip install paquete` instala en el entorno del sistema operativo de la sesion,
-pero el interprete Python del notebook puede no ver esa instalacion. `%pip`
-instala en el entorno activo del notebook y es el patron recomendado.
+En esta primera introduccion no instalaremos paquetes externos. Databricks ya
+incluye Spark, PySpark y Delta Lake para los objetivos de la sesion.
+
+En notebooks de proyecto, si necesitas una libreria adicional, usa el gestor de
+paquetes del notebook. Evita instalar desde comandos de shell, porque puede
+instalar en un entorno distinto al interprete activo.
         """),
     ]
 
@@ -887,17 +885,22 @@ plan_con_filtro.explain("formatted")
 print(f"Filas resultantes: {plan_con_filtro.count():,}")
         """),
         code("""
-# repartition vs coalesce
+# repartition vs coalesce sin usar APIs RDD
+# En serverless/Spark Connect evitamos APIs de bajo nivel de RDD.
 pequeno = spark.range(0, 1000)
 
-try:
-    print("Particiones iniciales:", pequeno.rdd.getNumPartitions())
-    print("repartition(8):", pequeno.repartition(8).rdd.getNumPartitions())
-    print("coalesce(1):", pequeno.coalesce(1).rdd.getNumPartitions())
-except Exception as exc:
-    print("En Spark Connect algunas APIs RDD pueden no estar disponibles.")
-    print("Concepto: repartition hace shuffle balanceado; coalesce reduce particiones con menor costo pero puede desbalancear.")
-    print(f"Detalle: {exc}")
+reparticionado = pequeno.repartition(8)
+coalescido = reparticionado.coalesce(1)
+
+print("Plan con repartition(8): busca Exchange, porque repartition hace shuffle.")
+reparticionado.explain("formatted")
+
+print("\\nPlan con coalesce(1): reduce particiones con menor costo, pero puede desbalancear.")
+coalescido.explain("formatted")
+
+print("\\nValidacion con acciones simples:")
+print("Filas reparticionado:", reparticionado.count())
+print("Filas coalescido    :", coalescido.count())
         """),
         code("""
 # Cache: demo conceptual compatible con entornos donde cache puede estar limitado
@@ -1179,7 +1182,7 @@ pivot_categoria = (
     enriquecido
     .groupBy("pickup_hour")
     .pivot("categoria_viaje", ["micro", "corto", "medio", "largo"])
-    .agg(F.count("*"))
+    .agg(F.count(F.lit(1)))
     .orderBy("pickup_hour")
 )
 pivot_categoria.show()
@@ -1292,51 +1295,49 @@ def _seccion_12():
 Dask escala Python y se integra muy bien con numpy, scipy y scikit-learn. Spark
 trabaja con un optimizador SQL/DataFrame maduro: Catalyst. Por eso Spark suele
 ser mas fuerte en data engineering, joins grandes, SQL distribuido y lakehouse.
+
+## Por que no ejecutamos Dask en este notebook
+
+En Databricks Free/Community serverless, las versiones de librerias externas
+pueden no coincidir con las que espera un ejemplo de Dask. Para evitar que la
+clase dependa de instalaciones o conflictos de version, esta seccion queda como
+comparacion conceptual.
+
+La decision tecnica sigue siendo importante:
+
+- Si el flujo nace en Pandas/numpy/scipy y quieres paralelizar Python, Dask puede ser natural.
+- Si el flujo vive en tablas, SQL, Delta Lake, jobs y gobierno de datos, Spark suele ser mejor.
+- Para esta clase, Spark es el motor que ya viene integrado y soportado por Databricks.
         """),
         code("""
-# Dask vs Spark: ejemplo pequeno sobre la misma muestra
-import dask.dataframe as dd
-
-pdf_base = (
+# Ejemplo equivalente SOLO en Spark: groupBy y join sobre la fuente de taxis
+sdf_bench = (
     leer_taxi()
     .select("fare_amount", "tpep_pickup_datetime", "pickup_zip")
-    .limit(100000)
-    .toPandas()
+    .where("fare_amount > 0")
 )
-pdf_base = pdf_base[pdf_base["fare_amount"] > 0].copy()
 
-ddf = dd.from_pandas(pdf_base, npartitions=8)
-sdf_bench = spark.createDataFrame(pdf_base)
-
-t0 = time.perf_counter()
-dask_res = (
-    ddf.assign(hora=dd.to_datetime(ddf["tpep_pickup_datetime"]).dt.hour)
-       .groupby("hora")["fare_amount"]
-       .agg(["count", "mean"])
-       .compute()
-)
-t_dask = time.perf_counter() - t0
-
-t0 = time.perf_counter()
 spark_bench = (
     sdf_bench
     .withColumn("hora", F.hour("tpep_pickup_datetime"))
     .groupBy("hora")
-    .agg(F.count("*").alias("count"), F.avg("fare_amount").alias("mean"))
+    .agg(
+        F.count(F.lit(1)).alias("viajes"),
+        F.round(F.avg("fare_amount"), 2).alias("tarifa_prom")
+    )
+    .orderBy("hora")
 )
 spark_bench.show(5)
-t_spark = time.perf_counter() - t0
 
-print(f"Dask : {t_dask:.2f}s")
-print(f"Spark: {t_spark:.2f}s")
-        """),
-        code("""
-# Join con broadcast en Spark
-ref_pdf = pdf_base[["pickup_zip"]].dropna().drop_duplicates().head(100).copy()
-ref_pdf["zona"] = "referencia"
+zip_ref = (
+    sdf_bench
+    .select("pickup_zip")
+    .where(F.col("pickup_zip").isNotNull())
+    .distinct()
+    .withColumn("zona_referencia", F.lit("zona_demo"))
+)
 
-ref_sdf = spark.createDataFrame(ref_pdf)
-join_spark = sdf_bench.join(F.broadcast(ref_sdf), on="pickup_zip", how="inner")
+join_spark = sdf_bench.join(F.broadcast(zip_ref), on="pickup_zip", how="inner")
 print(f"Filas join Spark: {join_spark.count():,}")
 join_spark.explain("formatted")
         """),
@@ -1493,11 +1494,16 @@ except Exception as exc:
         """),
         code("""
 # VACUUM: eliminar archivos obsoletos
-print("VACUUM debe usarse con cuidado porque limita time travel a versiones antiguas.")
-spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "false")
-spark.sql(f"VACUUM {DELTA_MAIN} RETAIN 0 HOURS")
-spark.conf.set("spark.databricks.delta.retentionDurationCheck.enabled", "true")
+print("VACUUM elimina archivos obsoletos que ya no son necesarios para la tabla Delta.")
+print("En Databricks serverless no cambiamos la configuracion de retencion.")
+print("Usamos la retencion segura por defecto de Delta Lake.")
+
+spark.sql(f"VACUUM {DELTA_MAIN}")
 spark.sql(f"DESCRIBE DETAIL {DELTA_MAIN}").select("numFiles", "sizeInBytes").show()
+
+print("\\nAdvertencia:")
+print("En algunos laboratorios antiguos se fuerza una retencion de cero horas.")
+print("No hacemos eso aqui: reduce o elimina la capacidad de hacer time travel a versiones antiguas.")
         """),
     ]
 
