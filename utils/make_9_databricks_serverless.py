@@ -2,7 +2,7 @@
 """
 Genera Cuadernos/9_Databricks_Serverless_Completo.ipynb
 
-Sesion 9: primera introduccion guiada a Databricks Community Edition.
+Sesion 9: primera introduccion guiada a Databricks Free/Community Edition serverless.
 """
 
 from pathlib import Path
@@ -77,22 +77,22 @@ def _proposito():
     return md("""
 ## Proposito pedagogico
 
-Esta sesion es una **primera introduccion guiada a Databricks Community Edition** despues
+Esta sesion es una **primera introduccion guiada a Databricks Free Edition / Community 2026** despues
 de haber estudiado Hadoop, YARN y Spark en la sesion anterior. La meta no es
 memorizar comandos aislados: la meta es entender donde viven los datos, como se
 ejecuta Spark dentro de Databricks y como se construye un flujo reproducible.
 
 ## Alcance de la sesion
 
-Trabajaremos con Databricks Community Edition, clusters clasicos, `dbutils`,
-Spark SQL, PySpark DataFrames, Parquet y Delta Lake. Tambien veremos, como
-panorama, conceptos modernos de Databricks como Unity Catalog, Volumes,
-Lakeflow y Workflows, aclarando cuando no esten disponibles en Community Edition.
+Trabajaremos con Databricks en su edicion gratuita 2026, que usa computo
+serverless y Unity Catalog. Por eso evitaremos patrones legacy como depender de
+DBFS root o de `sparkContext`, y usaremos Spark SQL, PySpark DataFrames, tablas,
+Volumes cuando esten disponibles, Parquet y Delta Lake.
 
 ## Agenda sugerida
 
-1. Entender la interfaz de Databricks Community Edition y el cluster clasico.
-2. Aprender comandos magicos, `dbutils`, DBFS y la idea moderna de Volumes.
+1. Entender la interfaz de Databricks gratuito/serverless.
+2. Aprender comandos magicos, `dbutils`, Unity Catalog y Volumes.
 3. Leer, transformar y escribir datos con CSV, JSON, Parquet y Delta.
 4. Comprender Spark: schemas, SQL, funciones, lazy evaluation y planes.
 5. Comparar Spark con Pandas y Dask.
@@ -111,10 +111,10 @@ def _toc():
     return md("""
 ## Contenido
 
-- 0. Databricks Community Edition y panorama moderno 2025-2026
+- 0. Databricks Free/Community 2026: serverless y plataforma moderna
 - 1. Magic commands y dbutils
-- 2. SparkSession, SparkContext y Spark Connect como panorama
-- 3. Catalogos, tablas, DBFS y Volumes
+- 2. SparkSession y Spark Connect
+- 3. Catalogos, tablas y Volumes
 - 4. Spark SQL completo: TempViews, DDL y DML
 - 5. Tipos de datos y schemas
 - 6. Lectura y escritura: CSV, JSON, Parquet y Delta
@@ -137,10 +137,10 @@ def _correspondencia():
 
 | Sesion 7 | En esta sesion |
 |---|---|
-| Hadoop y YARN explican la administracion de recursos | Community Edition usa un cluster administrado sencillo para practicar |
+| Hadoop y YARN explican la administracion de recursos | Databricks serverless abstrae gran parte de esa administracion |
 | Spark como motor distribuido | Spark se usa con SQL, DataFrames y PySpark |
-| Clusters y ejecucion distribuida | SparkSession, SparkContext, Jobs, Stages y Tasks |
-| Archivos y almacenamiento | DBFS en CE; Unity Catalog y Volumes como panorama moderno |
+| Clusters y ejecucion distribuida | SparkSession, Spark Connect, Jobs, Stages y Tasks |
+| Archivos y almacenamiento | Unity Catalog, Volumes y tablas administradas |
 
 Conservamos la intuicion distribuida de la sesion 7, pero la llevamos al flujo
 actual de Databricks.
@@ -149,38 +149,37 @@ actual de Databricks.
 
 def _seccion_0():
     return [
-        section_header("0", "Databricks Community Edition y panorama moderno 2025-2026"),
+        section_header("0", "Databricks Free/Community 2026: serverless y plataforma moderna"),
         md("""
 ## Definicion formal
 
-**Databricks Community Edition** es una version gratuita y limitada de Databricks
-para aprender notebooks, clusters clasicos, Spark SQL, PySpark y tablas Delta.
-No incluye todas las capacidades empresariales modernas, pero es suficiente para
-una primera clase muy completa.
+**Databricks Free Edition** es la version gratuita actual de Databricks para
+estudiantes, docentes y personas que estan aprendiendo. En 2026 reemplaza a la
+antigua Community Edition y funciona en un entorno **serverless**, con cuotas y
+algunas limitaciones.
 
 ## Intuicion
 
-En Community Edition el estudiante crea o conecta un cluster clasico. Ese flujo
-es perfecto para aprender que existe un driver, un SparkContext, jobs y stages.
-Luego, como panorama, compararemos con el modelo moderno serverless que se usa
-en workspaces pagos.
+En este entorno no administramos nodos manualmente. El estudiante abre un
+notebook y Databricks conecta compute serverless. Esto hace mas simple la clase,
+pero exige usar patrones modernos: DataFrames, Spark SQL, Unity Catalog, tablas
+y Volumes cuando esten disponibles.
 
-| Aspecto | Community Edition / Classic cluster | Serverless moderno |
-|---|---|---|
-| Arranque | Minutos | Segundos o muy poco tiempo |
-| Infraestructura | Manual | Administrada |
-| `sparkContext` | Normalmente disponible | Puede no estar disponible |
-| Archivos | DBFS/FileStore para clase | Preferir Unity Catalog y Volumes |
-| Spark UI | Clasica | Query Profile / query insights |
-| Actualizaciones | Manuales | Administradas |
+| Aspecto | Databricks Free/Community 2026 |
+|---|---|
+| Compute | Serverless administrado |
+| Infraestructura | No se eligen nodos manualmente |
+| `sparkContext` | Puede no estar disponible por Spark Connect |
+| Archivos | Preferir Volumes, tablas o archivos del workspace |
+| DBFS root / FileStore | Legacy o acceso limitado |
+| Observabilidad | Query Profile / query insights |
 
 ## Ecosistema actual
 
-Databricks hoy no es solo "Spark en la nube". En la plataforma completa incluye
-notebooks, SQL warehouses, Workflows, Unity Catalog, Volumes, Delta Lake, Photon,
-Liquid Clustering, Lakeflow, Model Serving y herramientas AI/BI como Genie. En
-Community Edition veremos lo esencial y marcaremos lo que pertenece al panorama
-empresarial.
+Databricks hoy no es solo "Spark en la nube". Incluye notebooks, SQL, Workflows,
+Unity Catalog, Volumes, Delta Lake, Photon, Liquid Clustering, Lakeflow, Model
+Serving y herramientas AI/BI como Genie. En la edicion gratuita pueden existir
+cuotas o funciones limitadas, pero el modelo mental moderno es el mismo.
         """),
         code("""
 # Deteccion inicial del entorno Databricks
@@ -218,8 +217,7 @@ try:
 except Exception:
     photon = "no detectable"
 
-IS_COMMUNITY_STYLE = HAS_SPARK_CONTEXT and not HAS_UNITY_CATALOG
-print(f"IS_SERVERLESS={IS_SERVERLESS}, COMMUNITY_STYLE={IS_COMMUNITY_STYLE}, UC={HAS_UNITY_CATALOG}, Photon={photon}")
+print(f"IS_SERVERLESS={IS_SERVERLESS}, UC={HAS_UNITY_CATALOG}, Photon={photon}")
 
 def nombre_tabla(nombre):
     if HAS_UNITY_CATALOG:
@@ -227,8 +225,8 @@ def nombre_tabla(nombre):
     return f"{current_schema}.{nombre}"
         """),
         interp("deteccion del entorno", [
-            "En Community Edition normalmente `sparkContext` esta disponible.",
-            "Si el catalogo es `hive_metastore`, estamos en un esquema clasico sin Unity Catalog.",
+            "En Databricks Free/Community 2026 es normal que `sparkContext` no este disponible directamente.",
+            "Si hay Unity Catalog, conviene trabajar con tablas y Volumes gobernados.",
             "La funcion `nombre_tabla` permite usar dos o tres niveles segun el entorno."
         ]),
         code("""
@@ -264,7 +262,7 @@ interactuar con archivos, widgets, secretos y ejecuciones de notebooks.
 | `%pip` | Instalar librerias en el entorno del notebook |
 | `%run` | Incluir otro notebook |
 | `%fs` | Comandos de archivos Databricks |
-| `%sh` | Shell del entorno; util con cuidado en clusters clasicos |
+| `%sh` | Shell del entorno; puede estar limitado en serverless |
 
 ## Intuicion
 
@@ -297,18 +295,35 @@ consulta.show(truncate=False)
 | `dbutils.secrets` | Leer credenciales almacenadas en secret scopes |
 | `dbutils.notebook` | Ejecutar o terminar notebooks desde codigo |
 
-En Community Edition se usa con frecuencia DBFS/FileStore para datos de clase.
-En Databricks empresarial moderno, se prefieren **Volumes** de Unity Catalog.
+En Databricks Free/Community 2026 el compute es serverless. El acceso a DBFS
+root o FileStore puede estar limitado, por eso el patron recomendado es:
+tablas, Volumes de Unity Catalog o archivos del workspace.
         """),
         code("""
-# Listar ubicaciones conocidas con dbutils.fs
-for ruta in ["dbfs:/", "dbfs:/FileStore/", "/Volumes/"]:
-    print(f"\\nListado de {ruta}")
-    try:
-        for item in dbutils.fs.ls(ruta)[:10]:
-            print(f"  {item.path} | {item.size} bytes")
-    except Exception as exc:
-        print(f"  No disponible o sin permisos: {exc}")
+# Explorar ubicaciones de forma segura en Databricks serverless
+# Evitamos listar dbfs:/FileStore o /Volumes/ directamente porque pueden fallar
+# por permisos o por las limitaciones del compute serverless.
+
+print("Catalogo y schema actuales:")
+spark.sql("SELECT current_catalog() AS catalogo, current_schema() AS schema").show(truncate=False)
+
+print("Tablas visibles en el schema actual:")
+spark.sql("SHOW TABLES").show(truncate=False)
+
+try:
+    catalogo_actual = spark.sql("SELECT current_catalog()").first()[0]
+    schema_actual = spark.sql("SELECT current_schema()").first()[0]
+    print(f"Volumes disponibles en {catalogo_actual}.{schema_actual}:")
+    spark.sql(f"SHOW VOLUMES IN {catalogo_actual}.{schema_actual}").show(truncate=False)
+except Exception as exc:
+    print("No se pudieron listar Volumes en este schema.")
+    print("Esto puede pasar si no hay Volumes creados o si faltan permisos.")
+    print(f"Detalle: {type(exc).__name__}: {exc}")
+
+print("\\nPatrones recomendados:")
+print("- Tabla administrada: catalog.schema.mi_tabla")
+print("- Volume si existe: /Volumes/<catalog>/<schema>/<volume>/<archivo>")
+print("- Archivo del workspace para ejemplos pequenos")
         """),
         code("""
 # Widgets: parametros simples para notebooks y jobs
@@ -341,28 +356,27 @@ print("dbutils.notebook.run('/Repos/proyecto/otro_notebook', 300, {'fecha': '202
 
 def _seccion_2():
     return [
-        section_header("2", "SparkSession, SparkContext y Spark Connect como panorama"),
+        section_header("2", "SparkSession y Spark Connect"),
         md("""
 ## Definicion formal
 
-**SparkSession** es la puerta principal para usar Spark desde PySpark. En
-Community Edition tambien suele estar disponible **SparkContext**, la API de
-nivel mas bajo que conecta con el cluster. **Spark Connect** es el modelo moderno
-cliente-servidor usado en varios entornos serverless.
+**SparkSession** es la puerta principal para usar Spark desde PySpark.
+**Spark Connect** es el modelo cliente-servidor usado por el compute serverless:
+el notebook envia planes al servidor Spark, y Spark los analiza, optimiza y
+ejecuta.
 
 ## Intuicion
 
-En Community Edition puedes ver `sparkContext`, lo cual ayuda a entender el
-cluster. Aun asi, para aprender bien Databricks conviene trabajar principalmente
-con `SparkSession`, DataFrames y SQL.
+En Databricks Free/Community 2026 no conviene depender de `sparkContext` ni de
+RDDs. Para aprender bien Databricks, usa `SparkSession`, DataFrames y SQL.
 
 | API | Recomendacion para esta clase |
 |---|---|
 | `spark.sql(...)` | Usar |
 | `spark.read.table(...)` | Usar |
 | DataFrame API | Usar |
-| `spark.sparkContext.parallelize(...)` | Conocer, pero no usar como patron principal |
-| RDDs | Panorama historico; preferir DataFrames |
+| `spark.sparkContext.parallelize(...)` | Evitar en serverless |
+| RDDs | No usarlos como patron de clase |
 | Global temp views | Evitar en clase; usar temp views o tablas |
         """),
         code("""
@@ -381,21 +395,21 @@ df_local.show()
         interp("SparkSession y SparkContext", [
             "El ejemplo muestra tres patrones compatibles: `spark.range`, `spark.sql` y `spark.createDataFrame`.",
             "Para una introduccion, basta pensar que Python describe un plan y Spark lo ejecuta en el cluster.",
-            "Aunque Community Edition permita RDDs, los DataFrames son el patron central del curso."
+            "Aunque algunos ejemplos antiguos usen RDDs, los DataFrames son el patron central del curso."
         ]),
     ]
 
 
 def _seccion_3():
     return [
-        section_header("3", "Catalogos, tablas, DBFS y Volumes"),
+        section_header("3", "Catalogos, tablas y Volumes"),
         md("""
 ## Definicion formal
 
-Databricks organiza tablas en catalogos y schemas. En Community Edition lo mas
-comun es trabajar con `hive_metastore.default.tabla` o simplemente
-`default.tabla`. En Databricks empresarial moderno, **Unity Catalog** formaliza
-el patron `catalog.schema.table` y agrega gobierno, lineage, auditoria y Volumes.
+Databricks organiza tablas en catalogos y schemas. En Databricks Free/Community
+2026 se trabaja con Unity Catalog y nombres como `catalog.schema.table` cuando
+estan disponibles. Los **Volumes** son el lugar recomendado para archivos no
+tabulares, como CSV, JSON, Parquet suelto o imagenes.
 
 ```
 catalog
@@ -405,9 +419,8 @@ catalog
 
 ## Intuicion
 
-En Community Edition preguntamos: "en que database/schema o ruta DBFS esta el
-dato". En la plataforma moderna preguntamos: "en que catalogo, schema, tabla o
-Volume vive el dato".
+La pregunta correcta es: "en que catalogo, schema, tabla o Volume vive el dato".
+No asumimos que `dbfs:/FileStore` existe o que se puede listar desde serverless.
         """),
         code("""
 # Explorar catalogos, schema y tablas de ejemplo
@@ -422,7 +435,7 @@ try:
     spark.sql("SHOW TABLES IN samples.nyctaxi").show(truncate=False)
 except Exception as exc:
     print("La tabla samples.nyctaxi no esta disponible en este entorno.")
-    print("Usaremos un dataset sintetico de taxis para Community Edition.")
+    print("Usaremos un dataset sintetico de taxis para este entorno.")
     print(f"Detalle: {type(exc).__name__}: {exc}")
         """),
         code("""
@@ -435,7 +448,7 @@ try:
     sdf = spark.read.table(TAXI_TABLE)
     print(f"Tabla externa disponible: {TAXI_TABLE}")
 except Exception:
-    print("Creando dataset sintetico de taxis para Community Edition.")
+    print("Creando dataset sintetico de taxis para este entorno.")
     taxi_rows = [
         ("2026-01-01 08:00:00", "2026-01-01 08:18:00", 10001, 10002, 18.5, 3.2, 2.4, 1),
         ("2026-01-01 09:10:00", "2026-01-01 09:25:00", 10002, 10003, 15.0, 2.0, 1.8, 2),
@@ -465,21 +478,19 @@ print(f"Columnas: {len(sdf.columns)}")
 sdf.printSchema()
         """),
         interp("tabla de muestra", [
-            "Si `samples.nyctaxi.trips` existe se usa; si no, el notebook crea un dataset sintetico para Community Edition.",
+            "Si `samples.nyctaxi.trips` existe se usa; si no, el notebook crea un dataset sintetico para este entorno.",
             "El schema nos dice tipos de columnas antes de transformar datos.",
             "El conteo confirma que ya tenemos una fuente de taxis disponible para el resto de la clase."
         ]),
         code("""
-# DBFS y Volumes
+# Volumes y rutas modernas
 try:
     spark.sql("SHOW VOLUMES IN samples.nyctaxi").show(truncate=False)
 except Exception as exc:
-    print("Volumes no disponibles en Community Edition o sin permisos.")
+    print("No hay Volumes visibles en samples.nyctaxi o faltan permisos.")
     print(f"Detalle: {exc}")
 
-print("Ruta DBFS comun en Community Edition:")
-print("dbfs:/FileStore/archivo.csv")
-print("\\nRuta de Volume en Databricks con Unity Catalog:")
+print("Ruta de Volume en Databricks:")
 print("/Volumes/<catalog>/<schema>/<volume>/<archivo>")
 print("Ejemplo: /Volumes/main/bronze/raw_files/ventas.parquet")
         """),
@@ -488,7 +499,7 @@ print("Ejemplo: /Volumes/main/bronze/raw_files/ventas.parquet")
 
 No uses `C:\\Users\\estudiante\\Downloads\\archivo.csv` dentro de Databricks.
 Esa ruta existe en el computador local, no en el compute de Databricks. Primero
-sube el archivo a un Volume o crea una tabla.
+sube el archivo a un Volume, a archivos del workspace o crea una tabla.
         """),
     ]
 
@@ -510,8 +521,8 @@ objetos; **DML** inserta, actualiza o elimina datos.
 | DML | `INSERT INTO`, `MERGE`, `DELETE`, `UPDATE` |
 
 Para compartir resultados entre sesiones, prefiere tablas en el metastore
-(`default.mi_tabla` en Community Edition). En workspaces con Unity Catalog,
-usa nombres de tres niveles.
+(`catalog.schema.mi_tabla` cuando Unity Catalog esta disponible). Si tu workspace
+usa un metastore legacy, el notebook ajusta el nombre con la funcion `nombre_tabla`.
         """),
         code("""
 # Crear TempView desde un DataFrame y consultarla con SQL
@@ -725,20 +736,15 @@ io_base = io_base.withColumn("fecha", F.to_date("fecha_txt")).drop("fecha_txt")
 io_base.show()
         """),
         code("""
-# Parquet en Volume si existe permiso; si no, seguir con tabla Delta
+# Parquet en Volume si existe permiso; si no, seguir con tabla administrada
 VOLUME_NAME = "sesion9_archivos"
-if HAS_UNITY_CATALOG:
-    BASE_IO_PATH = f"/Volumes/{CATALOG}/{SCHEMA}/{VOLUME_NAME}"
-else:
-    BASE_IO_PATH = "dbfs:/FileStore/sesion9_archivos"
-
+BASE_IO_PATH = f"/Volumes/{CATALOG}/{SCHEMA}/{VOLUME_NAME}"
 PARQUET_PATH = f"{BASE_IO_PATH}/io_demo_parquet"
 JSON_PATH = f"{BASE_IO_PATH}/io_demo_json"
 CSV_PATH = f"{BASE_IO_PATH}/io_demo_csv"
 
 try:
-    if HAS_UNITY_CATALOG:
-        spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.{SCHEMA}.{VOLUME_NAME}")
+    spark.sql(f"CREATE VOLUME IF NOT EXISTS {CATALOG}.{SCHEMA}.{VOLUME_NAME}")
     io_base.write.mode("overwrite").parquet(PARQUET_PATH)
     io_base.write.mode("overwrite").json(JSON_PATH)
     io_base.write.mode("overwrite").option("header", True).csv(CSV_PATH)
@@ -752,20 +758,24 @@ try:
     print("Lectura CSV con opciones:")
     spark.read.option("header", True).option("inferSchema", True).csv(CSV_PATH).show()
 except Exception as exc:
-    print("No fue posible escribir en la ruta configurada. En Community Edition revisa DBFS/FileStore.")
+    print("No fue posible crear o escribir en un Volume.")
+    print("Seguimos con tablas administradas, que funcionan bien para la clase.")
     print(f"Detalle: {type(exc).__name__}: {exc}")
+    PARQUET_TABLE = nombre_tabla("sesion9_parquet_demo")
+    io_base.write.format("parquet").mode("overwrite").saveAsTable(PARQUET_TABLE)
+    print(f"Tabla Parquet administrada creada: {PARQUET_TABLE}")
+    spark.read.table(PARQUET_TABLE).show()
         """),
-        interp("datos locales, DBFS/Volumes y formatos", [
+        interp("datos locales, Volumes y formatos", [
             "Databricks no lee directamente `C:\\Users`; necesita rutas accesibles al workspace.",
             "Parquet conserva schema y es columnar; CSV necesita opciones e inferencia.",
-            "Para Community Edition, DBFS/FileStore es suficiente; en entornos empresariales, Volumes es el patron moderno."
+            "En serverless, Volumes o tablas administradas son mas seguros que depender de DBFS legacy."
         ]),
         md("""
 ## `saveAsTable()` vs `write.save()`
 
-- `saveAsTable("default.tabla")` crea una tabla en Community Edition.
-- `saveAsTable("catalog.schema.tabla")` es el patron con Unity Catalog.
-- `write.save("dbfs:/FileStore/...")` o `write.save("/Volumes/...")` escribe archivos en una ruta.
+- `saveAsTable("catalog.schema.tabla")` crea una tabla gobernada.
+- `write.save("/Volumes/...")` escribe archivos en un Volume.
 - Para analitica repetible, prefiere tablas Delta.
         """),
         code("""
@@ -793,7 +803,7 @@ spark.read.table(DESTINO_IO).show()
 print("COPY INTO para ingesta incremental desde archivos:")
 print(f'''
 COPY INTO {DESTINO_IO}
-FROM 'dbfs:/FileStore/sesion9_archivos/nuevos_archivos/'
+FROM '/Volumes/<catalog>/<schema>/<volume>/nuevos_archivos/'
 FILEFORMAT = PARQUET
 COPY_OPTIONS ('mergeSchema' = 'true')
 ''')
@@ -804,7 +814,7 @@ df_stream = (
     spark.readStream
     .format("cloudFiles")
     .option("cloudFiles.format", "json")
-    .load("dbfs:/FileStore/sesion9_archivos/raw/")
+    .load("/Volumes/<catalog>/<schema>/<volume>/raw/")
 )
 ''')
         """),
@@ -1488,7 +1498,7 @@ try:
     spark.sql(f"CREATE TABLE {CLONE_TABLE} SHALLOW CLONE {DELTA_MAIN}")
     spark.sql(f"DESCRIBE HISTORY {CLONE_TABLE}").select("version", "timestamp", "operation").show(5, truncate=False)
 except Exception as exc:
-    print("CLONE puede no estar disponible en Community Edition.")
+    print("CLONE puede no estar disponible en este workspace.")
     print(f"Detalle: {type(exc).__name__}: {exc}")
         """),
         code("""
@@ -1561,7 +1571,7 @@ print("Para ejecutar: Workflows -> Lakeflow Declarative Pipelines -> Create pipe
 
 - Usa **batch** cuando reprocesas lotes completos o tablas estables.
 - Usa **streaming** cuando llegan archivos o eventos nuevos continuamente.
-- En Community Edition esta seccion es conceptual; en workspaces pagos verifica los triggers soportados.
+- En Databricks Free/Community serverless esta seccion es introductoria; verifica los triggers soportados por tu workspace.
 
 ## Parametros
 
@@ -1579,7 +1589,7 @@ def eventos_bronze_stream():
         spark.readStream
         .format("cloudFiles")
         .option("cloudFiles.format", "json")
-        .load("dbfs:/FileStore/raw_events/")
+        .load("/Volumes/<catalog>/<schema>/<volume>/raw_events/")
     )
 '''
 
@@ -1695,9 +1705,9 @@ raise NotImplementedError("Completa el ejercicio 5 siguiendo las instrucciones."
 ## Checklist final
 
 ```
-[ ] Uso `default.tabla` en Community Edition o `catalog.schema.table` en Unity Catalog
+[ ] Uso `catalog.schema.table` cuando Unity Catalog esta disponible
 [ ] Entiendo por que C:\\Users no funciona dentro de Databricks
-[ ] Uso DBFS/FileStore en Community Edition y conozco Volumes como patron moderno
+[ ] Uso Volumes o tablas administradas en lugar de depender de DBFS legacy
 [ ] Prefiero DataFrames/Spark SQL sobre RDDs para el trabajo principal
 [ ] Uso %pip, no %sh pip
 [ ] Puedo leer CSV, JSON, Parquet y Delta
@@ -1718,7 +1728,9 @@ ejecuciones gobernadas.
         md("""
 ## Referencias
 
-- Databricks Community Edition: https://docs.databricks.com/en/getting-started/community-edition.html
+- Databricks Free Edition: https://docs.databricks.com/aws/en/getting-started/free-edition
+- Databricks Free Edition limitations: https://docs.databricks.com/aws/en/getting-started/free-edition-limitations
+- Serverless compute limitations: https://docs.databricks.com/aws/en/compute/serverless/limitations
 - Databricks notebooks: https://docs.databricks.com/en/notebooks/
 - DBFS: https://docs.databricks.com/en/dbfs/
 - Databricks widgets: https://docs.databricks.com/en/notebooks/widgets.html
@@ -1735,27 +1747,27 @@ ejecuciones gobernadas.
 def build_cells():
     cells = [
         *uce_header(
-            title="Databricks Community Edition: tutorial completo de introduccion",
+            title="Databricks: tutorial completo de introduccion",
             session=9,
             github_path="main/Cuadernos/9_Databricks_Serverless_Completo.ipynb",
             nota_plataforma=(
-                "Databricks Community Edition con cluster clasico. "
-                "Se incluyen notas de panorama sobre capacidades empresariales modernas."
+                "Databricks Free/Community 2026 con compute serverless. "
+                "El notebook evita DBFS legacy y prioriza tablas, Volumes y Spark SQL."
             ),
         ),
         _proposito(),
         _correspondencia(),
         _toc(),
         *_seccion_0(),
-        pregunta(1, "Community Edition", "En esta clase se trabaja con un cluster clasico de Databricks Community Edition.", "Que idea describe mejor este entorno?", ["Spark desaparece", "Permite practicar notebooks, Spark SQL y PySpark con recursos limitados", "Solo se puede usar Pandas", "No existen tablas"], "B", "Community Edition es suficiente para aprender el flujo base de Databricks y Spark."),
+        pregunta(1, "Databricks", "En esta clase se trabaja con Databricks Free/Community 2026 sobre serverless.", "Que idea describe mejor este entorno?", ["Spark desaparece", "Permite practicar notebooks, Spark SQL y PySpark con recursos serverless", "Solo se puede usar Pandas", "No existen tablas"], "B", "Databricks gratuito/serverless es suficiente para aprender el flujo base de Spark y tablas."),
         *_seccion_1(),
         pregunta(2, "dbutils", "Los notebooks se parametrizan para jobs.", "Que modulo permite crear parametros visibles en el notebook?", ["dbutils.widgets", "dbutils.fs", "dbutils.secrets", "spark.catalog"], "A", "`dbutils.widgets` crea parametros de entrada."),
         *_seccion_2(),
-        pregunta(3, "Spark", "Community Edition suele exponer SparkSession y SparkContext.", "Que API conviene priorizar?", ["RDDs", "sparkContext.parallelize", "DataFrames y Spark SQL", "Loops locales con collect"], "C", "DataFrames y SQL son el patron principal y optimizable."),
+        pregunta(3, "Spark", "En serverless se usa Spark Connect y no conviene depender de RDDs.", "Que API conviene priorizar?", ["RDDs", "sparkContext.parallelize", "DataFrames y Spark SQL", "Loops locales con collect"], "C", "DataFrames y SQL son el patron principal y optimizable."),
         *_seccion_3(),
-        pregunta(4, "Tablas", "En Community Edition suele usarse el schema `default`; en Unity Catalog se usan tres niveles.", "Cual ruta NO debe usarse dentro de Databricks para leer datos del computador local?", ["default.trips", "hive_metastore.default.trips", "catalog.schema.table", "C:/datos/trips.csv"], "D", "Databricks no ve directamente el disco local del estudiante; se debe subir el archivo a DBFS o a un Volume."),
+        pregunta(4, "Tablas", "Databricks serverless no ve directamente el disco local del estudiante.", "Cual ruta NO debe usarse dentro de Databricks para leer datos del computador local?", ["catalog.schema.table", "/Volumes/catalog/schema/volume/datos.csv", "archivo subido al workspace", "C:/datos/trips.csv"], "D", "Databricks no ve directamente el disco local; se debe subir el archivo o usar Volumes/tablas."),
         *_seccion_4(),
-        pregunta(5, "Spark SQL", "Una TempView vive durante la sesion.", "Que conviene usar para persistir resultados en Community Edition?", ["TempView", "Tabla en `default`", "Variable Python", "print"], "B", "Una tabla en el metastore permanece disponible despues de la celda."),
+        pregunta(5, "Spark SQL", "Una TempView vive durante la sesion.", "Que conviene usar para persistir resultados?", ["TempView", "Tabla administrada", "Variable Python", "print"], "B", "Una tabla administrada permanece disponible despues de la celda."),
         *_seccion_5(),
         pregunta(6, "Schemas", "El schema es el contrato del dato.", "Por que declarar schema ayuda?", ["Evita toda ejecucion", "Reduce errores de inferencia y cambios silenciosos", "Convierte todo a texto", "Elimina permisos"], "B", "Un contrato explicito mejora confiabilidad."),
         *_seccion_6(),
