@@ -431,42 +431,33 @@ SCHEMA = spark.sql("SELECT current_schema()").first()[0]
 print(f"Catalogo activo: {CATALOG}")
 print(f"Schema activo  : {SCHEMA}")
 
-try:
-    spark.sql("SHOW TABLES IN samples.nyctaxi").show(truncate=False)
-except Exception as exc:
-    print("La tabla samples.nyctaxi no esta disponible en este entorno.")
-    print("Usaremos un dataset sintetico de taxis para este entorno.")
-    print(f"Detalle: {type(exc).__name__}: {exc}")
+spark.sql("SHOW TABLES IN samples.nyctaxi").show(truncate=False)
         """),
         code("""
-# Leer tabla de muestra si existe; si no, crear dataset sintetico compatible con CE
+# Leer y validar el schema real de samples.nyctaxi.trips
 from pyspark.sql import functions as F
 
 TAXI_TABLE = "samples.nyctaxi.trips"
+sdf = spark.read.table(TAXI_TABLE)
 
-try:
-    sdf = spark.read.table(TAXI_TABLE)
-    print(f"Tabla externa disponible: {TAXI_TABLE}")
-except Exception:
-    print("Creando dataset sintetico de taxis para este entorno.")
-    taxi_rows = [
-        ("2026-01-01 08:00:00", "2026-01-01 08:18:00", 10001, 10002, 18.5, 3.2, 2.4, 1),
-        ("2026-01-01 09:10:00", "2026-01-01 09:25:00", 10002, 10003, 15.0, 2.0, 1.8, 2),
-        ("2026-01-01 10:20:00", "2026-01-01 10:55:00", 11201, 10001, 42.0, 8.0, 7.5, 1),
-        ("2026-01-02 14:05:00", "2026-01-02 14:35:00", 11377, 11201, 30.0, 4.5, 5.2, 3),
-        ("2026-01-02 18:40:00", "2026-01-02 19:05:00", 10001, 11377, 25.0, 5.0, 3.6, 1),
-        ("2026-01-03 21:00:00", "2026-01-03 21:45:00", 11201, 10002, 55.0, 10.0, 9.1, 2),
-    ]
-    sdf = spark.createDataFrame(
-        taxi_rows,
-        ["tpep_pickup_datetime", "tpep_dropoff_datetime", "pickup_zip", "dropoff_zip",
-         "fare_amount", "tip_amount", "trip_distance", "passenger_count"]
-    )
-    sdf = (
-        sdf
-        .withColumn("tpep_pickup_datetime", F.to_timestamp("tpep_pickup_datetime"))
-        .withColumn("tpep_dropoff_datetime", F.to_timestamp("tpep_dropoff_datetime"))
-    )
+columnas_esperadas = [
+    "tpep_pickup_datetime",
+    "tpep_dropoff_datetime",
+    "trip_distance",
+    "fare_amount",
+    "pickup_zip",
+    "dropoff_zip",
+]
+columnas_reales = sdf.columns
+columnas_faltantes = [c for c in columnas_esperadas if c not in columnas_reales]
+
+print(f"Tabla: {TAXI_TABLE}")
+print(f"Columnas reales: {columnas_reales}")
+
+if columnas_faltantes:
+    raise ValueError(f"Faltan columnas esperadas en {TAXI_TABLE}: {columnas_faltantes}")
+
+sdf = sdf.select(*columnas_esperadas)
 
 sdf.createOrReplaceTempView("taxi_source_v")
 
@@ -476,11 +467,14 @@ def leer_taxi():
 print(f"Filas: {sdf.count():,}")
 print(f"Columnas: {len(sdf.columns)}")
 sdf.printSchema()
+
+print("Metadatos del catalogo:")
+spark.sql(f"DESCRIBE TABLE {TAXI_TABLE}").show(truncate=False)
         """),
         interp("tabla de muestra", [
-            "Si `samples.nyctaxi.trips` existe se usa; si no, el notebook crea un dataset sintetico para este entorno.",
+            "La tabla oficial `samples.nyctaxi.trips` tiene 6 columnas en Databricks Free/Community 2026.",
             "El schema nos dice tipos de columnas antes de transformar datos.",
-            "El conteo confirma que ya tenemos una fuente de taxis disponible para el resto de la clase."
+            "Todas las transformaciones posteriores se basan solo en esas columnas verificadas."
         ]),
         code("""
 # Volumes y rutas modernas
@@ -528,8 +522,9 @@ usa un metastore legacy, el notebook ajusta el nombre con la funcion `nombre_tab
 # Crear TempView desde un DataFrame y consultarla con SQL
 taxi_sample = (
     leer_taxi()
-    .select("tpep_pickup_datetime", "fare_amount", "tip_amount", "trip_distance")
+    .select("tpep_pickup_datetime", "fare_amount", "trip_distance", "pickup_zip", "dropoff_zip")
     .where("fare_amount > 0 AND trip_distance > 0")
+    .withColumn("tarifa_por_milla", F.col("fare_amount") / F.col("trip_distance"))
     .limit(10000)
 )
 
@@ -539,7 +534,7 @@ spark.sql('''
 SELECT
   COUNT(*) AS viajes,
   ROUND(AVG(fare_amount), 2) AS tarifa_promedio,
-  ROUND(AVG(tip_amount), 2) AS propina_promedio
+  ROUND(AVG(tarifa_por_milla), 2) AS tarifa_por_milla_promedio
 FROM taxi_sample_v
 ''').show()
         """),
@@ -850,7 +845,7 @@ pipeline = (
     .filter(F.col("fare_amount") > 0)
     .filter(F.col("trip_distance") > 0.1)
     .withColumn("pickup_hour", F.hour("tpep_pickup_datetime"))
-    .withColumn("tip_pct", F.col("tip_amount") / F.col("fare_amount") * 100)
+    .withColumn("tarifa_por_milla", F.col("fare_amount") / F.col("trip_distance"))
 )
 print(f"Construir plan: {(time.perf_counter() - t0) * 1000:.2f} ms")
 print(pipeline)
@@ -883,7 +878,7 @@ pipeline.explain("formatted")
 # Predicate pushdown: seleccionar columnas y filtrar temprano
 plan_con_filtro = (
     leer_taxi()
-    .select("fare_amount", "trip_distance", "tip_amount")
+    .select("fare_amount", "trip_distance", "pickup_zip")
     .filter(F.col("fare_amount").between(10, 50))
     .filter(F.col("trip_distance") > 1)
 )
@@ -906,7 +901,7 @@ except Exception as exc:
         """),
         code("""
 # Cache: demo conceptual compatible con entornos donde cache puede estar limitado
-base = pipeline.select("pickup_hour", "fare_amount", "tip_pct")
+base = pipeline.select("pickup_hour", "fare_amount", "tarifa_por_milla")
 
 try:
     base.cache()
@@ -1105,8 +1100,7 @@ enriquecido = (
     sdf
     .select(
         "tpep_pickup_datetime", "tpep_dropoff_datetime",
-        "fare_amount", "tip_amount", "trip_distance",
-        "passenger_count", "pickup_zip"
+        "fare_amount", "trip_distance", "pickup_zip", "dropoff_zip"
     )
     .filter(F.col("fare_amount").between(1, 200))
     .filter(F.col("trip_distance") > 0)
@@ -1115,7 +1109,7 @@ enriquecido = (
         "duracion_min",
         (F.unix_timestamp("tpep_dropoff_datetime") - F.unix_timestamp("tpep_pickup_datetime")) / 60
     )
-    .withColumn("tip_pct", F.col("tip_amount") / F.col("fare_amount") * 100)
+    .withColumn("tarifa_por_milla", F.col("fare_amount") / F.col("trip_distance"))
     .withColumn(
         "categoria_viaje",
         F.when(F.col("trip_distance") < 1, "micro")
@@ -1135,7 +1129,7 @@ metricas = (
     .agg(
         F.count("*").alias("viajes"),
         F.round(F.avg("fare_amount"), 2).alias("tarifa_prom"),
-        F.round(F.avg("tip_pct"), 2).alias("tip_pct_prom"),
+        F.round(F.avg("tarifa_por_milla"), 2).alias("tarifa_por_milla_prom"),
         F.round(F.stddev("fare_amount"), 2).alias("tarifa_std"),
         F.round(F.percentile_approx("fare_amount", 0.9), 2).alias("tarifa_p90"),
     )
@@ -1194,12 +1188,11 @@ pivot_categoria.show()
 # Calidad de datos
 sdf.select([
     F.round(F.sum(F.col(c).isNull().cast("int")) / F.count("*") * 100, 2).alias(c)
-    for c in ["fare_amount", "tip_amount", "trip_distance", "pickup_zip", "passenger_count"]
+    for c in ["fare_amount", "trip_distance", "pickup_zip", "dropoff_zip"]
 ]).show(truncate=False)
 
 limpio = (
     sdf.na.drop(subset=["fare_amount", "trip_distance"])
-       .na.fill({"tip_amount": 0.0, "passenger_count": 1})
        .filter(F.col("fare_amount") > 0)
        .filter(F.col("trip_distance") > 0)
        .dropDuplicates(["tpep_pickup_datetime", "tpep_dropoff_datetime", "fare_amount"])
@@ -1391,7 +1384,6 @@ try:
       pickup_zip,
       dropoff_zip,
       fare_amount,
-      tip_amount,
       trip_distance,
       CAST(1 AS INT) AS es_valido
     FROM taxi_source_v
@@ -1411,7 +1403,6 @@ except Exception as exc:
       pickup_zip,
       dropoff_zip,
       fare_amount,
-      tip_amount,
       trip_distance,
       CAST(1 AS INT) AS es_valido
     FROM taxi_source_v
@@ -1443,7 +1434,6 @@ target = DeltaTable.forName(spark, DELTA_MAIN)
         "pickup_zip": "CAST(NULL AS INT)",
         "dropoff_zip": "CAST(NULL AS INT)",
         "fare_amount": "CAST(0 AS DOUBLE)",
-        "tip_amount": "CAST(0 AS DOUBLE)",
         "trip_distance": "CAST(0 AS DOUBLE)",
         "es_valido": "s.es_valido",
     })
@@ -1548,7 +1538,7 @@ def taxi_silver():
     return (
         dlt.read("taxi_bronze")
         .withColumn("pickup_hour", F.hour("tpep_pickup_datetime"))
-        .withColumn("tip_pct", F.col("tip_amount") / F.col("fare_amount") * 100)
+        .withColumn("tarifa_por_milla", F.col("fare_amount") / F.col("trip_distance"))
     )
 
 @dlt.table(name="taxi_gold_hourly", comment="Metricas por hora")
@@ -1659,13 +1649,13 @@ instrucciones y deja un `NotImplementedError` para que el estudiante complete.
         """),
         code("""
 # Ejercicio 1 -- Window functions
-# Construye el top 3 de categorias de viaje por hora con mayor tip_pct promedio.
+# Construye el top 3 de categorias de viaje por hora con mayor tarifa_por_milla promedio.
 # Requisitos:
 # - Leer la fuente de taxis preparada en `leer_taxi()`.
-# - Crear pickup_hour, tip_pct y categoria_viaje.
+# - Crear pickup_hour, tarifa_por_milla y categoria_viaje.
 # - Agrupar por pickup_hour y categoria_viaje.
 # - Filtrar grupos con menos de 100 viajes.
-# - Usar Window.partitionBy("pickup_hour").orderBy(F.desc("tip_pct_prom")).
+# - Usar Window.partitionBy("pickup_hour").orderBy(F.desc("tarifa_por_milla_prom")).
 
 raise NotImplementedError("Completa el ejercicio 1 siguiendo las instrucciones.")
         """),
