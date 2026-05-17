@@ -45,11 +45,14 @@ La solucion no debe afirmar fraude. Debe responder:
 2. Deben integrar varias bases: contratos, adiciones, ejecucion y territorio.
 3. Deben usar al menos un dato no estructurado: texto libre del objeto contractual
    o descripcion de adiciones.
-4. Deben crear documentos en MongoDB o, si el entorno lo impide, archivos JSON
-   con la misma estructura para luego cargarlos.
-5. Deben demostrar dos cargas: `lote_1` y `lote_2`.
-6. Deben crear datos para un dashboard.
-7. Airflow es opcional. El taller se debe poder resolver desde este cuaderno.
+4. Deben resolver un reto NoSQL real con MongoDB: modelo documental, `upsert`,
+   consultas por campos anidados, agregaciones y busqueda textual.
+5. Deben crear documentos en MongoDB. Si el entorno de clase lo impide, pueden
+   generar JSON de respaldo, pero la entrega final debe mostrar MongoDB o una
+   justificacion tecnica verificable.
+6. Deben demostrar dos cargas: `lote_1` y `lote_2`.
+7. Deben crear datos para un dashboard.
+8. Airflow es opcional. El taller se debe poder resolver desde este cuaderno.
 
 El reto no es copiar codigo. El reto es completar, ejecutar, verificar y explicar.
     """),
@@ -60,11 +63,43 @@ El reto no es copiar codigo. El reto es completar, ejecutar, verificar y explica
 |---|---|
 | Notebook ejecutado | Evidencia de cada reto resuelto |
 | Arquitectura | Diagrama del flujo usado |
-| MongoDB o JSON | Documentos de contratos, alertas y resumenes |
+| Modelo NoSQL | Explicacion de por que se embeben entidad, proveedor, territorio, texto y prioridad |
+| MongoDB | Documentos, indices, consultas, agregaciones y metadata de carga |
 | Dashboard | KPIs, alertas, proveedores, entidades y temas |
 | Informe ejecutivo | Hallazgos, limites y recomendaciones |
 
 El profesor verificara evidencias, no solo texto descriptivo.
+    """),
+    md("""
+## Criterios de entrega
+
+La entrega debe tener esta estructura minima:
+
+```text
+entrega_equipo/
+  notebook_taller.ipynb
+  informe_ejecutivo.pdf
+  arquitectura.png
+  evidencia_dashboard/
+    lote_1.png
+    lote_2.png
+  evidencia_mongodb/
+    contratos_operativos.json
+    alertas_revision.json
+    dashboard_kpis.json
+    dashboard_temas.json
+    consultas_mongodb.md
+```
+
+Si usan MongoDB Atlas, pueden reemplazar los JSON por capturas o exportaciones
+de las colecciones, pero deben demostrar:
+
+- nombre de la base de datos;
+- colecciones creadas;
+- cantidad de documentos por coleccion;
+- indices creados;
+- consultas ejecutadas;
+- diferencia entre lote 1 y lote 2.
     """),
     md("""
 ## Arquitectura minima que deben implementar
@@ -93,6 +128,7 @@ MongoDB
   dashboard_proveedores
   dashboard_temas
   metadata_pipeline
+  indices: texto_busqueda, prioridad.nivel, entidad.nit, proveedor.documento
         |
         v
 Dashboard / evidencias de consulta
@@ -545,10 +581,23 @@ display(lote_1_scored.sort_values("indice_prioridad_revision", ascending=False)[
     """),
     md("""
 ---
-# Reto 7. Convertir resultados en documentos MongoDB
+# Reto 7. Disenar el modelo documental NoSQL
 
-Cada contrato debe quedar como una ficha. Eso es lo que hace util a MongoDB: el
-usuario consulta un contrato sin reconstruir todas las uniones.
+Aqui aparece el reto NoSQL. No basta con guardar una tabla como JSON. Deben
+decidir que informacion queda embebida dentro del documento para que el usuario
+pueda consultar rapido.
+
+Decision de modelo:
+
+| Parte del documento | Decision NoSQL | Razon |
+|---|---|---|
+| entidad | embebida | se consulta junto con el contrato |
+| proveedor | embebido | permite ver ficha del contrato sin `JOIN` |
+| territorio | embebido | facilita filtros y dashboard territorial |
+| adiciones | embebidas/resumidas | son eventos ligados al contrato |
+| ejecucion | embebida/resumida | da estado operativo del contrato |
+| texto no estructurado | embebido | permite busqueda textual y temas |
+| prioridad | embebida | alimenta alertas y tablero |
 
 **Evidencia:** un documento JSON de ejemplo con texto, temas y prioridad.
     """),
@@ -616,12 +665,22 @@ docs_lote_1[0]
     """),
     md("""
 ---
-# Reto 8. Cargar MongoDB o generar respaldo JSON
+# Reto 8. Cargar MongoDB y demostrar capacidades NoSQL
 
 Si tienen MongoDB Atlas o local, carguen con `upsert`. Si no, generen JSON y
 carguen MongoDB antes de la sustentacion.
 
-**Evidencia:** conteos de carga o archivo JSON de respaldo.
+El reto NoSQL minimo incluye:
+
+1. Cargar documentos con estructura anidada.
+2. Usar `upsert` para no duplicar contratos.
+3. Crear indices sobre campos anidados.
+4. Crear indice de texto sobre `texto_no_estructurado.texto_busqueda`.
+5. Ejecutar consultas por prioridad, proveedor, entidad y texto.
+6. Ejecutar una agregacion con `$group` para alimentar el dashboard.
+
+**Evidencia:** conteos de carga, indices creados y al menos cuatro consultas
+NoSQL ejecutadas.
     """),
     code("""
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
@@ -660,6 +719,48 @@ def cargar_contratos(documentos, lote):
 
 resultado_carga_1 = cargar_contratos(docs_lote_1, "lote_1")
 resultado_carga_1
+    """),
+    code("""
+# Evidencia NoSQL: indices y consultas.
+# Si MongoDB no esta conectado, esta celda deja claro que debe ejecutarse
+# en la entrega final con Atlas o Mongo local.
+
+if mongo_ok:
+    db.contratos_operativos.create_index("prioridad.nivel")
+    db.contratos_operativos.create_index("entidad.nit")
+    db.contratos_operativos.create_index("proveedor.documento")
+    db.contratos_operativos.create_index([("texto_no_estructurado.texto_busqueda", "text")])
+
+    print("Indices creados:")
+    for idx in db.contratos_operativos.list_indexes():
+        print(idx["name"], idx["key"])
+
+    print("\\nConsulta 1: contratos de prioridad alta")
+    display(pd.DataFrame(list(db.contratos_operativos.find(
+        {"prioridad.nivel": "alta"},
+        {"_id": 0, "id_contrato": 1, "valor": 1, "entidad.nombre": 1, "prioridad": 1}
+    ).limit(5))))
+
+    print("\\nConsulta 2: busqueda textual por tema")
+    display(pd.DataFrame(list(db.contratos_operativos.find(
+        {"$text": {"$search": "salud tecnologia infraestructura"}},
+        {"_id": 0, "id_contrato": 1, "objeto": 1, "texto_no_estructurado.temas_detectados": 1}
+    ).limit(5))))
+
+    print("\\nAgregacion: valor por tema detectado")
+    pipeline_temas = [
+        {"$unwind": "$texto_no_estructurado.temas_detectados"},
+        {"$group": {
+            "_id": "$texto_no_estructurado.temas_detectados",
+            "total_contratos": {"$sum": 1},
+            "valor_total": {"$sum": "$valor"}
+        }},
+        {"$sort": {"total_contratos": -1}}
+    ]
+    display(pd.DataFrame(list(db.contratos_operativos.aggregate(pipeline_temas))))
+else:
+    print("MongoDB no esta conectado.")
+    print("Para la entrega final deben ejecutar esta celda con MongoDB y anexar evidencia de indices, consultas y agregacion.")
     """),
     md("""
 ---
@@ -827,6 +928,113 @@ otra herramienta conectada a las colecciones o a los JSON generados.
     """),
     md("""
 ---
+## PARTE 5 -- Rúbrica de Evaluación
+
+El taller debe realizarse en grupos de máximo tres estudiantes. Deberán
+compartir el notebook ejecutado, la evidencia de MongoDB/dashboard y el informe
+ejecutivo en la fecha indicada por el profesor, enviándolo con el asunto:
+
+`[BigData] Taller Final SECOP MongoDB`
+
+Adicionalmente, deben informar el **día y hora de descarga** de los datos,
+porque SECOP II recibe nuevos registros y actualizaciones diariamente.
+
+**Total: 100 puntos + 10 puntos bonus**
+
+### Componentes evaluables
+
+| Componente | Producto esperado | Puntos |
+|---|---|---:|
+| **1. Fuentes desde 2021** | Prueba de contratos, adiciones y ejecución filtradas desde `2021-01-01`; registro de fecha/hora de descarga. | 10 |
+| **2. Limpieza e integración** | Fechas, valores y texto convertidos; cruce con DIVIPOLA; integración con adiciones y ejecución. | 15 |
+| **3. Datos no estructurados** | Campo `texto_busqueda`, reglas de temas, `temas_detectados` y resumen por tema. | 15 |
+| **4. Índice de prioridad** | Reglas transparentes, ranking reproducible y lectura sin afirmar fraude. | 10 |
+| **5. Reto NoSQL MongoDB** | Modelo documental anidado, `upsert`, índices, consulta por campos anidados, búsqueda textual y agregación. | 20 |
+| **6. Dashboard operativo** | KPIs, alertas, entidades, proveedores, temas y evidencia de cambio entre lote 1 y lote 2. | 15 |
+| **7. Informe ejecutivo** | Hallazgos, límites, recomendaciones y explicación de qué revisar primero. | 10 |
+| **8. Reproducibilidad** | Notebook/script corre de nuevo, rutas claras, sin resultados pegados a mano. | 5 |
+
+**Bonus +10:** usar un volumen ampliado de datos, por ejemplo 100.000+ contratos
+desde 2021, o automatizar la ejecución con Airflow/Databricks Workflows sin
+romper la reproducibilidad del notebook base.
+
+---
+
+### Criterios generales
+
+| Criterio | Descripción | Puntos asociados |
+|----------|-------------|------------------|
+| **Limpieza de datos** | Convierte fechas, valores y texto correctamente. Maneja nulos sin eliminar filas innecesariamente. Normaliza municipio, entidad, proveedor y texto de búsqueda. | Incluido en componentes 2 y 3 |
+| **Integración de bases** | Une contratos, adiciones, ejecución y DIVIPOLA con llaves claras. Reporta cruces fallidos y no los oculta. | Componente 2 |
+| **Uso de datos no estructurados** | Usa texto libre del objeto contractual y/o adiciones. Construye `texto_busqueda`, detecta temas y explica limitaciones del método. | Componente 3 |
+| **Uso correcto de NoSQL** | No guarda una tabla plana. Diseña documentos anidados, crea índices, usa `upsert`, ejecuta consultas por campos anidados y agregaciones. | Componente 5 |
+| **Correctitud del resultado** | Los conteos, rankings, valores y alertas son reproducibles y coherentes con las reglas implementadas. | Todos los componentes |
+| **Visualización / dashboard** | Dashboard con títulos claros, filtros útiles y evidencia de actualización después de la segunda carga. | Componente 6 |
+| **Interpretación** | Explica qué muestra el resultado, qué implica para seguimiento público y qué no se puede concluir todavía. | Componente 7 |
+
+---
+
+### Tabla de niveles por criterio
+
+| Criterio | Excelente (100%) | Satisfactorio (70%) | Insuficiente (40%) | No entregado (0%) |
+|----------|-----------------|---------------------|--------------------|------------------|
+| **Fuentes** | Todas las fuentes consultadas desde 2021, con fecha/hora de descarga documentada | Fuentes principales consultadas, falta una evidencia menor | Filtro temporal incompleto o fuente sin verificar | No consulta fuentes |
+| **Limpieza e integración** | Tipos correctos, cruces documentados, nulos manejados y datos integrados | Integración funcional con algunos problemas menores | Integración parcial o con errores de tipo | Sin integración |
+| **Texto no estructurado** | `texto_busqueda` claro, temas explicados, resumen por tema y limitaciones | Temas detectados pero con explicación limitada | Solo copia texto sin análisis real | No usa texto |
+| **NoSQL MongoDB** | Documento anidado, índices, `upsert`, búsqueda textual, agregaciones y consultas evidenciadas | Carga documentos y algunas consultas, pero faltan índices o agregaciones | MongoDB usado como tabla plana o solo JSON | No usa NoSQL |
+| **Prioridad** | Reglas claras, ranking reproducible, interpretación responsable | Ranking funcional con reglas poco justificadas | Ranking arbitrario o difícil de reproducir | Sin ranking |
+| **Dashboard** | Conectado a MongoDB o datos exportados, muestra cambio lote 1 vs lote 2 | Dashboard básico con pocos filtros | Gráficas sueltas sin actualización clara | Sin dashboard |
+| **Informe** | Ejecutivo, claro, con hallazgos, límites y recomendación de revisión | Describe resultados pero con poca profundidad | Informe superficial o sin límites | Sin informe |
+
+---
+
+### Penalizaciones
+
+| Situación | Penalización |
+|-----------|-------------:|
+| No informar fecha/hora de descarga | -5 puntos |
+| No filtrar desde `2021-01-01` | -15 puntos |
+| Resultados hardcodeados o pegados sin computar | -20 puntos |
+| Código que no corre por errores no explicados | -10 puntos |
+| Usar MongoDB solo como tabla plana sin documentos anidados | -10 puntos |
+| No demostrar `upsert` o actualización entre lote 1 y lote 2 | -10 puntos |
+| No usar texto no estructurado | -15 puntos |
+| Afirmar fraude/corrupción sin evidencia causal | -10 puntos |
+| No entregar dashboard ni evidencia equivalente | -15 puntos |
+
+---
+
+### Nota sobre tamaño de descarga
+
+Para clase se trabaja con dos micro-lotes de 100 contratos para validar el flujo.
+Para la entrega final, cada equipo debe ampliar el volumen según su capacidad de
+cómputo. Recomendación mínima:
+
+- **mínimo aceptable:** 2 lotes de 1.000 contratos;
+- **bueno:** 20.000+ contratos desde 2021;
+- **excelente/bonus:** 100.000+ contratos desde 2021 o descarga paginada amplia.
+
+Ejemplo de descarga paginada controlada:
+
+```python
+TOTAL_FILAS_OBJETIVO = 100_000
+TAMANO_LOTE = 10_000
+offsets = list(range(0, TOTAL_FILAS_OBJETIVO, TAMANO_LOTE))
+
+partes = []
+for offset in offsets:
+    parte = descargar_lote(offset=offset, limit=TAMANO_LOTE)
+    partes.append(parte)
+    print(f"Descargadas {min(offset + TAMANO_LOTE, TOTAL_FILAS_OBJETIVO):,} filas")
+
+contratos_ampliados = pd.concat(partes, ignore_index=True)
+```
+
+No sobrecarguen la API. Si hacen descarga amplia, documenten el día, hora,
+tamaño descargado y cualquier error de red.
+
+---
+
 # Matriz de verificacion del profesor
 
 | Criterio | Evidencia esperada | Cumple |
@@ -841,20 +1049,6 @@ otra herramienta conectada a las colecciones o a los JSON generados.
 | Dashboard | KPIs, alertas, entidades, proveedores y temas |  |
 | Actualizacion | Comparacion entre lote 1 y lote 2 |  |
 | Interpretacion | No afirma fraude; explica limites |  |
-    """),
-    md("""
-## Rubrica
-
-| Criterio | Peso |
-|---|---:|
-| Fuentes y filtro desde 2021 | 10% |
-| Integracion de bases | 15% |
-| Limpieza y calidad | 10% |
-| Uso claro de texto no estructurado | 15% |
-| Indice de prioridad | 10% |
-| MongoDB como capa operativa | 15% |
-| Dashboard y actualizacion | 15% |
-| Informe ejecutivo | 10% |
     """),
     md("""
 ## Cierre del reto
