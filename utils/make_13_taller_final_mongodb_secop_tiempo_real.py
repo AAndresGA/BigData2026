@@ -2,8 +2,8 @@
 """
 Genera Cuadernos/13_Taller_Final_MongoDB_SECOP_Tiempo_Real.ipynb
 
-Guia de taller final: observatorio operativo de contratacion publica con
-SECOP II desde 2021, texto no estructurado, MongoDB y dashboard.
+Taller final en formato reto: observatorio operativo de contratacion publica
+con SECOP II desde 2021, datos no estructurados, MongoDB y dashboard.
 """
 
 from pathlib import Path
@@ -17,164 +17,95 @@ from utils.make_notebook import md, code, save, validate, uce_header
 
 cells = [
     *uce_header(
-        title="Taller final: observatorio operativo de contratacion publica con MongoDB",
+        title="Taller final: reto de observatorio operativo con SECOP II y MongoDB",
         session=13,
         github_path="main/Cuadernos/13_Taller_Final_MongoDB_SECOP_Tiempo_Real.ipynb",
-        nota_plataforma="Jupyter, Colab o Databricks. MongoDB Atlas recomendado para dashboard.",
+        nota_plataforma="Jupyter, Colab o Databricks. MongoDB Atlas recomendado para el dashboard.",
     ),
     md("""
-# Guia de taller
+# Reto del taller
 
-Este taller construye una solucion aplicada para un problema real de analitica
-publica: una oficina de control interno necesita revisar contratacion publica
-reciente, detectar casos que merecen seguimiento y consultar la informacion sin
-reconstruir cruces manuales cada vez.
+Una oficina de control interno necesita una herramienta sencilla para revisar
+contratacion publica reciente. El equipo no quiere leer miles de filas crudas.
+Necesita una bandeja de contratos priorizados, fichas consultables y un tablero
+que cambie cuando llega una nueva carga.
 
-El equipo trabajara solo con informacion desde `2021-01-01`.
+Ustedes son el equipo de datos. Deben construir un prototipo funcional con datos
+publicos de SECOP II desde `2021-01-01`.
 
-No se espera demostrar fraude ni irregularidades. El producto debe priorizar
-revision con reglas descriptivas, trazables y explicables.
+La solucion no debe afirmar fraude. Debe responder:
+
+> Que contratos, proveedores, entidades, territorios y temas merecen revision
+> prioritaria segun reglas descriptivas y verificables?
     """),
     md("""
-## Contexto de negocio
+## Reglas del reto
 
-Una entidad publica recibe solicitudes frecuentes de seguimiento:
+1. Solo se aceptan datos desde `2021-01-01`.
+2. Deben integrar varias bases: contratos, adiciones, ejecucion y territorio.
+3. Deben usar al menos un dato no estructurado: texto libre del objeto contractual
+   o descripcion de adiciones.
+4. Deben crear documentos en MongoDB o, si el entorno lo impide, archivos JSON
+   con la misma estructura para luego cargarlos.
+5. Deben demostrar dos cargas: `lote_1` y `lote_2`.
+6. Deben crear datos para un dashboard.
+7. Airflow es opcional. El taller se debe poder resolver desde este cuaderno.
 
-- revisar contratos nuevos de alto valor;
-- identificar contratos con adiciones o modificaciones;
-- consultar rapidamente la ficha de un proveedor;
-- saber que entidades concentran mayor valor contratado;
-- buscar contratos por temas escritos en lenguaje natural, por ejemplo
-  alimentacion, salud, infraestructura, educacion o tecnologia;
-- presentar un tablero actualizado despues de cada nueva carga.
-
-El problema no es solo tecnico. La informacion esta distribuida en varias bases:
-contratos, adiciones, ejecucion contractual y territorio. Ademas, una parte
-importante viene como texto no estructurado en el objeto contractual y en las
-descripciones de adiciones.
-
-El resultado del taller debe funcionar como un pequeno observatorio operativo.
+El reto no es copiar codigo. El reto es completar, ejecutar, verificar y explicar.
     """),
     md("""
-## Producto que debe entregar cada equipo
+## Lo que deben entregar
 
-Al finalizar, cada equipo debe entregar una carpeta o repositorio con:
+| Entregable | Que debe contener |
+|---|---|
+| Notebook ejecutado | Evidencia de cada reto resuelto |
+| Arquitectura | Diagrama del flujo usado |
+| MongoDB o JSON | Documentos de contratos, alertas y resumenes |
+| Dashboard | KPIs, alertas, proveedores, entidades y temas |
+| Informe ejecutivo | Hallazgos, limites y recomendaciones |
 
-1. Notebook ejecutado con evidencia de consulta de fuentes desde 2021.
-2. Diagrama de arquitectura seguido por el equipo.
-3. Diccionario corto de datos usados.
-4. Script o notebook de ingesta y transformacion.
-5. Base MongoDB cargada o evidencia equivalente de carga.
-6. Colecciones MongoDB para consulta operativa y dashboard.
-7. Dashboard conectado a MongoDB o capturas verificables.
-8. Evidencia de dos cargas: `lote_1` y `lote_2`.
-9. Informe ejecutivo de maximo 3 paginas con hallazgos, limites y recomendaciones.
-
-Airflow es opcional. Si el equipo lo usa, debe ser una extension de la solucion,
-no el centro del taller.
+El profesor verificara evidencias, no solo texto descriptivo.
     """),
     md("""
-## Arquitectura que deben seguir
+## Arquitectura minima que deben implementar
 
 ```text
-Datos Abiertos Colombia
-  - SECOP II contratos
-  - SECOP II adiciones
-  - SECOP II ejecucion
-  - DIVIPOLA municipios
+SECOP II contratos desde 2021
+SECOP II adiciones desde 2021
+SECOP II ejecucion desde 2021
+DIVIPOLA municipios
         |
         v
-Micro-batch 1 y Micro-batch 2
+Lote 1 y lote 2
         |
         v
-Limpieza y normalizacion
-  - fechas
-  - valores monetarios
-  - entidad/proveedor
-  - departamento/municipio
-        |
-        v
-Enriquecimiento
-  - cruce territorial
-  - resumen de adiciones
-  - ultimo avance de ejecucion
-  - temas desde texto no estructurado
+Limpieza + cruces + texto no estructurado
         |
         v
 Indice descriptivo de prioridad
         |
         v
 MongoDB
-  - contratos_operativos
-  - alertas_revision
-  - dashboard_kpis
-  - dashboard_entidades
-  - dashboard_proveedores
-  - dashboard_temas
-  - metadata_pipeline
+  contratos_operativos
+  alertas_revision
+  dashboard_kpis
+  dashboard_entidades
+  dashboard_proveedores
+  dashboard_temas
+  metadata_pipeline
         |
         v
-Dashboard operativo
-  - KPIs
-  - alertas
-  - proveedores
-  - entidades
-  - temas detectados
+Dashboard / evidencias de consulta
 ```
-
-La arquitectura debe aparecer en la entrega del equipo. Puede ser este diagrama
-adaptado, una imagen, o un diagrama propio, pero debe conservar las mismas capas.
-    """),
-    md("""
-## Fuentes obligatorias
-
-| Fuente | Endpoint | Uso |
-|---|---|---|
-| SECOP II contratos electronicos | `https://www.datos.gov.co/resource/jbjy-vk9h.json` | contratos, entidad, proveedor, valor, fechas, objeto |
-| SECOP II adiciones | `https://www.datos.gov.co/resource/cb9c-h8sn.json` | eventos de modificacion o adicion |
-| SECOP II ejecucion | `https://www.datos.gov.co/resource/mfmm-jqmq.json` | avance y estado de ejecucion |
-| DIVIPOLA municipios | `https://www.datos.gov.co/resource/gdxc-w37w.json` | departamento, municipio, codigo y coordenadas |
-
-El equipo puede agregar poblacion, IPM u otra fuente social, pero esas fuentes
-son extension. El taller base se verifica con las cuatro fuentes anteriores.
-    """),
-    md("""
-## Metodologia de trabajo
-
-El taller se desarrolla en siete etapas. Cada etapa deja una evidencia que el
-profesor puede revisar.
-
-| Etapa | Trabajo del equipo | Evidencia verificable |
-|---|---|---|
-| 1. Verificar fuentes | Probar endpoints y filtro desde 2021 | tabla con filas de muestra por fuente |
-| 2. Descargar micro-batch | Descargar `lote_1` y `lote_2` | conteo de contratos por lote |
-| 3. Limpiar datos | Convertir fechas, valores y textos | muestra de datos limpios |
-| 4. Enriquecer | Unir contratos con adiciones, ejecucion y DIVIPOLA | tabla de contratos enriquecidos |
-| 5. Usar texto | Detectar temas desde objeto contractual | tabla con `temas_detectados` |
-| 6. Cargar MongoDB | Crear o actualizar documentos con `upsert` | conteos de carga y metadata |
-| 7. Dashboard | Mostrar KPIs, alertas y temas | capturas antes/despues o enlace |
-    """),
-    md("""
-## Criterios minimos de aceptacion
-
-El taller se considera completo si se puede verificar:
-
-- hay datos desde 2021;
-- hay al menos dos cargas diferenciadas;
-- existe una ficha operativa por contrato;
-- MongoDB recibe documentos con entidad, proveedor, territorio, ejecucion,
-  adiciones, prioridad y texto no estructurado;
-- se crea una coleccion de alertas;
-- se crea al menos una coleccion resumen para dashboard;
-- el dashboard o sus datos cambian despues de la segunda carga;
-- el informe explica que no se detecta fraude, solo prioridad descriptiva.
     """),
     md("""
 ---
-# Etapa 1. Preparacion del entorno
+# Reto 0. Preparar el entorno
 
-Ejecuta esta celda para instalar dependencias si hacen falta. En equipos con
-entorno ya preparado, la celda solo confirma disponibilidad.
+Ejecuten la celda. Si faltan paquetes, se instalan. Si ya existen, el notebook
+continua.
+
+**Evidencia:** la celda termina sin error.
     """),
     code("""
 import sys
@@ -195,10 +126,10 @@ faltantes = [
 ]
 
 if faltantes:
-    print("Instalando:", faltantes)
+    print("Instalando paquetes faltantes:", faltantes)
     subprocess.check_call([sys.executable, "-m", "pip", "install", "--quiet", *faltantes])
 else:
-    print("Dependencias principales disponibles.")
+    print("Dependencias listas.")
     """),
     code("""
 import os
@@ -226,75 +157,64 @@ SALIDA = Path("salidas_taller_final")
 SALIDA.mkdir(exist_ok=True)
 
 def consultar_socrata(url, params=None, timeout=45):
-    params = params or {}
-    r = requests.get(url, params=params, timeout=timeout)
+    r = requests.get(url, params=params or {}, timeout=timeout)
     r.raise_for_status()
     return r.json()
-    """),
-    md("""
-## Verificacion docente de la etapa 1
 
-El profesor debe ver que las dependencias cargan y que `FECHA_INICIO` queda
-definida como `2021-01-01T00:00:00`.
+print("Fecha minima del reto:", FECHA_INICIO)
     """),
     md("""
 ---
-# Etapa 2. Verificacion de fuentes desde 2021
+# Reto 1. Probar que las fuentes sirven
 
-Antes de descargar lotes grandes, el equipo debe demostrar que las fuentes
-responden y que el filtro temporal funciona.
+No empiecen descargando datos grandes. Primero prueben que cada fuente responde
+y que el filtro desde 2021 funciona.
+
+**Evidencia:** cuatro muestras visibles: contratos, adiciones, ejecucion y DIVIPOLA.
     """),
     code("""
-def mostrar_muestra(nombre, params):
-    datos = consultar_socrata(FUENTES[nombre], params=params)
+def muestra(nombre, params):
+    datos = consultar_socrata(FUENTES[nombre], params)
     df = pd.DataFrame(datos)
     print(f"{nombre}: {df.shape[0]} filas, {df.shape[1]} columnas")
     display(df.head(3))
     return df
 
-muestra_contratos = mostrar_muestra(
-    "contratos",
-    {
-        "$select": "id_contrato,fecha_de_firma,ultima_actualizacion,departamento,ciudad,valor_del_contrato",
-        "$where": f"fecha_de_firma >= '{FECHA_INICIO}'",
-        "$limit": 3,
-    },
-)
+_contratos = muestra("contratos", {
+    "$select": "id_contrato,fecha_de_firma,departamento,ciudad,valor_del_contrato,objeto_del_contrato",
+    "$where": f"fecha_de_firma >= '{FECHA_INICIO}'",
+    "$limit": 3,
+})
 
-muestra_adiciones = mostrar_muestra(
-    "adiciones",
-    {
-        "$select": "id_contrato,tipo,descripcion,fecharegistro",
-        "$where": f"fecharegistro >= '{FECHA_INICIO}'",
-        "$limit": 3,
-    },
-)
+_adiciones = muestra("adiciones", {
+    "$select": "id_contrato,tipo,descripcion,fecharegistro",
+    "$where": f"fecharegistro >= '{FECHA_INICIO}'",
+    "$limit": 3,
+})
 
-muestra_ejecucion = mostrar_muestra(
-    "ejecucion",
-    {
-        "$select": "identificadorcontrato,tipoejecucion,fechacreacion,porcentaje_de_avance_real,estado_del_contrato",
-        "$where": f"fechacreacion >= '{FECHA_INICIO}'",
-        "$limit": 3,
-    },
-)
+_ejecucion = muestra("ejecucion", {
+    "$select": "identificadorcontrato,fechacreacion,porcentaje_de_avance_real,estado_del_contrato",
+    "$where": f"fechacreacion >= '{FECHA_INICIO}'",
+    "$limit": 3,
+})
 
-muestra_divipola = mostrar_muestra("divipola", {"$limit": 3})
+_divipola = muestra("divipola", {"$limit": 3})
     """),
     md("""
-## Verificacion docente de la etapa 2
+**Checkpoint del profesor**
 
-Revisar que aparezcan filas de las cuatro fuentes. Si una fuente falla por
-conexion, el equipo debe documentar el error y reintentar. No se acepta cambiar
-el periodo del taller para evitar el filtro desde 2021.
+- Las tres fuentes SECOP muestran fechas desde 2021.
+- DIVIPOLA muestra municipios con codigo y coordenadas.
+- El equipo puede explicar para que sirve cada fuente.
     """),
     md("""
 ---
-# Etapa 3. Descarga de micro-batches
+# Reto 2. Descargar dos lotes de contratos
 
-El taller no exige descargar todo SECOP. Se trabaja con lotes pequenos para
-probar el flujo completo. El equipo puede aumentar `BATCH_SIZE` si su entorno
-lo permite.
+El prototipo debe simular actualizacion. Por eso se usan dos lotes. El segundo
+lote representa una nueva carga.
+
+**Evidencia:** conteo de filas de `lote_1` y `lote_2`.
     """),
     code("""
 BATCH_SIZE = 100
@@ -322,7 +242,7 @@ CONTRATOS_SELECT = ",".join([
     "objeto_del_contrato",
 ])
 
-def descargar_contratos_batch(limit=BATCH_SIZE, offset=0):
+def descargar_lote(offset, limit=BATCH_SIZE):
     params = {
         "$select": CONTRATOS_SELECT,
         "$where": f"fecha_de_firma >= '{FECHA_INICIO}'",
@@ -330,28 +250,23 @@ def descargar_contratos_batch(limit=BATCH_SIZE, offset=0):
         "$offset": offset,
         "$order": "fecha_de_firma DESC",
     }
-    return pd.DataFrame(consultar_socrata(FUENTES["contratos"], params=params))
+    return pd.DataFrame(consultar_socrata(FUENTES["contratos"], params))
 
-contratos_lote_1 = descargar_contratos_batch(BATCH_SIZE, 0)
-contratos_lote_2 = descargar_contratos_batch(BATCH_SIZE, BATCH_SIZE)
+lote_1 = descargar_lote(0)
+lote_2 = descargar_lote(BATCH_SIZE)
 
-print("lote_1", contratos_lote_1.shape)
-print("lote_2", contratos_lote_2.shape)
-display(contratos_lote_1.head(5))
-    """),
-    md("""
-## Verificacion docente de la etapa 3
-
-Revisar que existan dos lotes. Deben tener identificadores de contrato y fechas
-desde 2021. El equipo debe reportar cuantas filas descargo en cada lote.
+print("lote_1:", lote_1.shape)
+print("lote_2:", lote_2.shape)
+display(lote_1.head())
     """),
     md("""
 ---
-# Etapa 4. Limpieza de contratos y cruce territorial
+# Reto 3. Limpiar contratos y cruzar territorio
 
-En esta etapa se convierten tipos y se intenta cruzar municipio/departamento con
-DIVIPOLA. El cruce puede no ser perfecto: esa es una condicion normal de datos
-reales.
+Conviertan fechas y valores. Luego intenten cruzar departamento/municipio con
+DIVIPOLA.
+
+**Evidencia:** tabla con `id_contrato`, municipio, valor y codigo DIVIPOLA.
     """),
     code("""
 def normalizar_texto(x):
@@ -362,36 +277,26 @@ def normalizar_texto(x):
     x = "".join(c for c in x if not unicodedata.combining(c))
     return " ".join(x.split())
 
-def a_numero(x):
-    return pd.to_numeric(x, errors="coerce").fillna(0)
-
 def preparar_contratos(df):
     out = df.copy()
     for col in ["fecha_de_firma", "fecha_de_inicio_del_contrato", "fecha_de_fin_del_contrato", "ultima_actualizacion"]:
-        if col in out.columns:
-            out[col] = pd.to_datetime(out[col], errors="coerce")
+        out[col] = pd.to_datetime(out[col], errors="coerce")
     for col in ["valor_del_contrato", "valor_pagado", "dias_adicionados"]:
-        if col in out.columns:
-            out[col] = a_numero(out[col])
-    out["departamento_norm"] = out.get("departamento", "").apply(normalizar_texto)
-    out["ciudad_norm"] = out.get("ciudad", "").apply(normalizar_texto)
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0)
+    out["departamento_norm"] = out["departamento"].apply(normalizar_texto)
+    out["ciudad_norm"] = out["ciudad"].apply(normalizar_texto)
     return out
 
-def preparar_divipola(df):
-    out = df.copy()
-    out["departamento_norm"] = out["dpto"].apply(normalizar_texto)
-    out["ciudad_norm"] = out["nom_mpio"].apply(normalizar_texto)
-    out["latitud_num"] = pd.to_numeric(out["latitud"].str.replace(",", ".", regex=False), errors="coerce")
-    out["longitud_num"] = pd.to_numeric(out["longitud"].str.replace(",", ".", regex=False), errors="coerce")
-    return out
+divipola = pd.DataFrame(consultar_socrata(FUENTES["divipola"], {"$limit": 1200}))
+divipola["departamento_norm"] = divipola["dpto"].apply(normalizar_texto)
+divipola["ciudad_norm"] = divipola["nom_mpio"].apply(normalizar_texto)
+divipola["latitud_num"] = pd.to_numeric(divipola["latitud"].str.replace(",", ".", regex=False), errors="coerce")
+divipola["longitud_num"] = pd.to_numeric(divipola["longitud"].str.replace(",", ".", regex=False), errors="coerce")
 
-divipola = pd.DataFrame(consultar_socrata(FUENTES["divipola"], params={"$limit": 1200}))
-divipola_limpia = preparar_divipola(divipola)
-
-def cruzar_divipola(df):
-    limpio = preparar_contratos(df)
-    return limpio.merge(
-        divipola_limpia[[
+def cruzar_territorio(df):
+    base = preparar_contratos(df)
+    return base.merge(
+        divipola[[
             "cod_dpto", "cod_mpio", "dpto", "nom_mpio",
             "departamento_norm", "ciudad_norm", "latitud_num", "longitud_num"
         ]],
@@ -399,53 +304,52 @@ def cruzar_divipola(df):
         how="left",
     )
 
-contratos_geo_1 = cruzar_divipola(contratos_lote_1)
-print("Contratos lote 1 con codigo DIVIPOLA:", contratos_geo_1["cod_mpio"].notna().sum(), "de", len(contratos_geo_1))
-display(contratos_geo_1[["id_contrato", "departamento", "ciudad", "valor_del_contrato", "cod_mpio"]].head(10))
+lote_1_geo = cruzar_territorio(lote_1)
+print("Cruces DIVIPOLA lote_1:", lote_1_geo["cod_mpio"].notna().sum(), "de", len(lote_1_geo))
+display(lote_1_geo[["id_contrato", "departamento", "ciudad", "valor_del_contrato", "cod_mpio"]].head(10))
     """),
     md("""
-## Verificacion docente de la etapa 4
+**Checkpoint del profesor**
 
-Revisar que `valor_del_contrato` sea numerico y que el equipo reporte cuantos
-contratos cruzaron con DIVIPOLA. No se exige 100% de cruce porque los nombres
-territoriales pueden venir con diferencias.
+Si hay contratos sin DIVIPOLA, no es falla automatica. El equipo debe reportar
+el porcentaje de cruce y explicar que los nombres territoriales reales no
+siempre coinciden.
     """),
     md("""
 ---
-# Etapa 5. Integracion con adiciones y ejecucion
+# Reto 4. Integrar adiciones y ejecucion
 
-Cada lote de contratos define que adiciones y registros de ejecucion se deben
-consultar. Asi se simula un proceso incremental y no una descarga innecesaria
-de toda la base.
+Para cada lote, busquen adiciones y ejecucion solo de los contratos descargados.
+Esto hace que el flujo sea incremental.
+
+**Evidencia:** tabla con numero de adiciones y ultimo avance real.
     """),
     code("""
 def construir_in_clause(ids):
-    ids_limpios = [str(x).replace("'", "") for x in ids if pd.notna(x)]
-    if not ids_limpios:
+    ids = [str(x).replace("'", "") for x in ids if pd.notna(x)]
+    if not ids:
         return "('')"
-    return "(" + ",".join([f"'{x}'" for x in ids_limpios]) + ")"
+    return "(" + ",".join([f"'{x}'" for x in ids]) + ")"
 
-def descargar_adiciones(ids_contrato):
-    in_clause = construir_in_clause(ids_contrato)
+def descargar_adiciones(ids):
     params = {
         "$select": "id_contrato,tipo,descripcion,fecharegistro",
-        "$where": f"fecharegistro >= '{FECHA_INICIO}' AND id_contrato in {in_clause}",
+        "$where": f"fecharegistro >= '{FECHA_INICIO}' AND id_contrato in {construir_in_clause(ids)}",
         "$limit": 5000,
     }
-    return pd.DataFrame(consultar_socrata(FUENTES["adiciones"], params=params))
+    return pd.DataFrame(consultar_socrata(FUENTES["adiciones"], params))
 
-def descargar_ejecucion(ids_contrato):
-    in_clause = construir_in_clause(ids_contrato)
+def descargar_ejecucion(ids):
     params = {
-        "$select": "identificadorcontrato,tipoejecucion,fechacreacion,porcentaje_de_avance_real,estado_del_contrato",
-        "$where": f"fechacreacion >= '{FECHA_INICIO}' AND identificadorcontrato in {in_clause}",
+        "$select": "identificadorcontrato,fechacreacion,porcentaje_de_avance_real,estado_del_contrato",
+        "$where": f"fechacreacion >= '{FECHA_INICIO}' AND identificadorcontrato in {construir_in_clause(ids)}",
         "$limit": 5000,
     }
-    return pd.DataFrame(consultar_socrata(FUENTES["ejecucion"], params=params))
+    return pd.DataFrame(consultar_socrata(FUENTES["ejecucion"], params))
 
 def resumir_adiciones(df):
     if df.empty:
-        return pd.DataFrame(columns=["id_contrato", "numero_adiciones", "ultima_adicion", "tipos_adicion", "descripcion_adiciones"])
+        return pd.DataFrame(columns=["id_contrato", "numero_adiciones", "ultima_adicion", "descripcion_adiciones"])
     tmp = df.copy()
     tmp["fecharegistro"] = pd.to_datetime(tmp["fecharegistro"], errors="coerce")
     return (
@@ -453,8 +357,7 @@ def resumir_adiciones(df):
         .agg(
             numero_adiciones=("id_contrato", "size"),
             ultima_adicion=("fecharegistro", "max"),
-            tipos_adicion=("tipo", lambda s: sorted(set([str(x) for x in s.dropna()]))[:5]),
-            descripcion_adiciones=("descripcion", lambda s: list(s.dropna().astype(str).head(3))),
+            descripcion_adiciones=("descripcion", lambda s: " | ".join(s.dropna().astype(str).head(3))),
         )
         .reset_index()
     )
@@ -473,51 +376,66 @@ def resumir_ejecucion(df):
         "fechacreacion": "ultima_fecha_ejecucion",
     })[["id_contrato", "ultimo_avance_real", "estado_ejecucion", "ultima_fecha_ejecucion"]]
 
-def enriquecer_lote(df_contratos):
-    geo = cruzar_divipola(df_contratos)
+def enriquecer_lote(df):
+    geo = cruzar_territorio(df)
     ids = geo["id_contrato"].dropna().unique().tolist()
     adiciones = descargar_adiciones(ids)
     ejecucion = descargar_ejecucion(ids)
-    enriquecido = (
+    out = (
         geo
         .merge(resumir_adiciones(adiciones), on="id_contrato", how="left")
         .merge(resumir_ejecucion(ejecucion), on="id_contrato", how="left")
     )
-    enriquecido["numero_adiciones"] = enriquecido["numero_adiciones"].fillna(0).astype(int)
-    enriquecido["ultimo_avance_real"] = enriquecido["ultimo_avance_real"].fillna(0)
-    return enriquecido, adiciones, ejecucion
+    out["numero_adiciones"] = out["numero_adiciones"].fillna(0).astype(int)
+    out["ultimo_avance_real"] = out["ultimo_avance_real"].fillna(0)
+    return out, adiciones, ejecucion
 
-contratos_enriquecidos_1, adiciones_1, ejecucion_1 = enriquecer_lote(contratos_lote_1)
-display(contratos_enriquecidos_1[[
+lote_1_enriquecido, adiciones_1, ejecucion_1 = enriquecer_lote(lote_1)
+display(lote_1_enriquecido[[
     "id_contrato", "valor_del_contrato", "numero_adiciones",
-    "ultimo_avance_real", "estado_ejecucion", "proveedor_adjudicado"
+    "ultimo_avance_real", "estado_ejecucion"
 ]].head(10))
     """),
     md("""
-## Verificacion docente de la etapa 5
-
-Revisar que el equipo muestre `numero_adiciones` y `ultimo_avance_real`. Si no
-hay adiciones para el lote, debe quedar reportado como cero, no como error.
-    """),
-    md("""
 ---
-# Etapa 6. Uso simple de datos no estructurados
+# Reto 5. Hacer claro el dato no estructurado
 
-El texto libre del objeto contractual y de las adiciones es el componente no
-estructurado del taller. Para mantenerlo simple se usaran diccionarios de
-palabras clave. No se requiere machine learning.
+Este es el reto clave.
+
+Un dato estructurado tiene columnas limpias: valor, fecha, municipio, NIT.  
+Un dato no estructurado es texto libre: el objeto contractual o la descripcion
+de una adicion.
+
+Ejemplo:
+
+```text
+Prestacion de servicios profesionales para apoyar la gestion administrativa...
+```
+
+Ese texto no dice directamente "tema = servicios profesionales". Ustedes deben
+crear una regla simple que lea el texto y detecte temas.
+
+**Tarea del equipo**
+
+1. Crear un campo `texto_busqueda` uniendo objeto contractual y descripcion de adiciones.
+2. Limpiar ese texto.
+3. Detectar temas con palabras clave.
+4. Guardar los temas en MongoDB.
+5. Mostrar un resumen por tema para el dashboard.
+
+**Evidencia:** tabla con `id_contrato`, `texto_busqueda` y `temas_detectados`.
     """),
     code("""
-TEMAS_CONTRATACION = {
-    "alimentacion": ["alimentacion", "alimentos", "restaurante", "cafeteria", "comedor"],
-    "infraestructura": ["obra", "via", "mantenimiento", "construccion", "interventoria", "adecuacion"],
-    "salud": ["salud", "hospital", "medicamento", "ambulancia", "clinica"],
-    "educacion": ["colegio", "estudiante", "educativo", "escolar", "docente"],
-    "tecnologia": ["software", "licencia", "sistema", "computador", "tecnologia", "plataforma"],
-    "servicios_profesionales": ["prestacion de servicios", "apoyo a la gestion", "consultoria", "asesoria"],
+TEMAS = {
+    "alimentacion": ["ALIMENTACION", "ALIMENTOS", "CAFETERIA", "RESTAURANTE", "COMEDOR"],
+    "infraestructura": ["OBRA", "VIAS", "VIA", "CONSTRUCCION", "MANTENIMIENTO", "INTERVENTORIA"],
+    "salud": ["SALUD", "HOSPITAL", "MEDICAMENTO", "AMBULANCIA", "CLINICA"],
+    "educacion": ["COLEGIO", "ESTUDIANTE", "ESCOLAR", "EDUCATIVO", "DOCENTE"],
+    "tecnologia": ["SOFTWARE", "LICENCIA", "SISTEMA", "COMPUTADOR", "TECNOLOGIA", "PLATAFORMA"],
+    "servicios_profesionales": ["PRESTACION DE SERVICIOS", "APOYO A LA GESTION", "CONSULTORIA", "ASESORIA"],
 }
 
-def limpiar_texto_simple(x):
+def limpiar_texto(x):
     if pd.isna(x):
         return ""
     x = normalizar_texto(x)
@@ -525,36 +443,33 @@ def limpiar_texto_simple(x):
     return " ".join(x.split())
 
 def detectar_temas(texto):
-    texto_limpio = limpiar_texto_simple(texto)
-    temas = []
-    for tema, palabras in TEMAS_CONTRATACION.items():
-        for palabra in palabras:
-            if normalizar_texto(palabra) in texto_limpio:
-                temas.append(tema)
-                break
-    return temas if temas else ["sin_tema_detectado"]
+    limpio = limpiar_texto(texto)
+    encontrados = []
+    for tema, palabras in TEMAS.items():
+        if any(p in limpio for p in palabras):
+            encontrados.append(tema)
+    return encontrados if encontrados else ["sin_tema_detectado"]
 
-def agregar_texto_no_estructurado(df):
+def agregar_texto(df):
     out = df.copy()
-    out["texto_contrato_limpio"] = out["objeto_del_contrato"].apply(limpiar_texto_simple)
-    out["temas_detectados"] = out["objeto_del_contrato"].apply(detectar_temas)
+    out["objeto_texto"] = out["objeto_del_contrato"].fillna("")
+    out["adiciones_texto"] = out["descripcion_adiciones"].fillna("")
+    out["texto_busqueda"] = (out["objeto_texto"] + " " + out["adiciones_texto"]).apply(limpiar_texto)
+    out["temas_detectados"] = out["texto_busqueda"].apply(detectar_temas)
     return out
 
-contratos_texto_1 = agregar_texto_no_estructurado(contratos_enriquecidos_1)
-display(contratos_texto_1[["id_contrato", "objeto_del_contrato", "temas_detectados"]].head(10))
+lote_1_texto = agregar_texto(lote_1_enriquecido)
+display(lote_1_texto[["id_contrato", "texto_busqueda", "temas_detectados"]].head(10))
     """),
     code("""
 def resumen_temas(df):
     filas = []
     for _, row in df.iterrows():
-        temas = row.get("temas_detectados", [])
-        if not isinstance(temas, list):
-            temas = ["sin_tema_detectado"]
-        for tema in temas:
+        for tema in row["temas_detectados"]:
             filas.append({
                 "tema": tema,
-                "id_contrato": row.get("id_contrato"),
-                "valor_del_contrato": row.get("valor_del_contrato", 0),
+                "id_contrato": row["id_contrato"],
+                "valor_del_contrato": row["valor_del_contrato"],
             })
     base = pd.DataFrame(filas)
     if base.empty:
@@ -569,20 +484,27 @@ def resumen_temas(df):
         .sort_values("total_contratos", ascending=False)
     )
 
-display(resumen_temas(contratos_texto_1))
+display(resumen_temas(lote_1_texto))
     """),
     md("""
-## Verificacion docente de la etapa 6
+**Checkpoint del profesor**
 
-Revisar que exista la columna `temas_detectados` y que el equipo explique el
-metodo usado. La clasificacion por palabras clave no es perfecta; debe
-presentarse como apoyo exploratorio, no como verdad absoluta.
+El equipo debe poder explicar con sus palabras:
+
+- que columna es texto no estructurado;
+- como la limpio;
+- que palabras clave uso;
+- que errores puede cometer este metodo;
+- como se vera este resultado en MongoDB y en el dashboard.
     """),
     md("""
 ---
-# Etapa 7. Indice descriptivo de prioridad
+# Reto 6. Crear un indice de prioridad
 
-Este indice permite ordenar revision. No es una prueba de irregularidad.
+Construyan un puntaje simple. Pueden usar estas reglas o modificarlas, pero
+deben explicarlas.
+
+**Evidencia:** ranking de contratos con prioridad alta, media o baja.
     """),
     code("""
 def calcular_prioridad(df):
@@ -592,22 +514,14 @@ def calcular_prioridad(df):
     p90 = valor.quantile(0.90) if len(valor) else 0
 
     out["puntaje_valor"] = np.select([valor >= p90, valor >= p75], [25, 15], default=0)
-    out["puntaje_adiciones"] = np.select(
-        [out["numero_adiciones"] >= 2, out["numero_adiciones"] == 1],
-        [20, 10],
-        default=0,
-    )
+    out["puntaje_adiciones"] = np.select([out["numero_adiciones"] >= 2, out["numero_adiciones"] == 1], [20, 10], default=0)
     out["puntaje_ejecucion"] = np.where((out["ultimo_avance_real"] < 50) & (valor > p75), 15, 0)
     out["puntaje_modalidad"] = np.where(
         out["modalidad_de_contratacion"].fillna("").str.contains("Directa|Mínima|Minima", case=False, regex=True),
         10,
         0,
     )
-    out["puntaje_texto"] = np.where(
-        out["temas_detectados"].apply(lambda temas: "sin_tema_detectado" in temas),
-        5,
-        0,
-    )
+    out["puntaje_texto"] = np.where(out["temas_detectados"].apply(lambda x: "sin_tema_detectado" in x), 5, 0)
     out["indice_prioridad_revision"] = (
         out["puntaje_valor"] +
         out["puntaje_adiciones"] +
@@ -622,26 +536,21 @@ def calcular_prioridad(df):
     ).astype(str)
     return out
 
-contratos_scored_1 = calcular_prioridad(contratos_texto_1)
-display(contratos_scored_1.sort_values("indice_prioridad_revision", ascending=False)[[
+lote_1_scored = calcular_prioridad(lote_1_texto)
+display(lote_1_scored.sort_values("indice_prioridad_revision", ascending=False)[[
     "id_contrato", "nombre_entidad", "proveedor_adjudicado",
     "valor_del_contrato", "numero_adiciones", "temas_detectados",
     "indice_prioridad_revision", "nivel_prioridad"
-]].head(10))
-    """),
-    md("""
-## Verificacion docente de la etapa 7
-
-Revisar que el equipo presente el ranking y explique las reglas de puntaje. La
-redaccion debe decir "prioridad de revision", no "fraude".
+]].head(15))
     """),
     md("""
 ---
-# Etapa 8. Modelo documental para MongoDB
+# Reto 7. Convertir resultados en documentos MongoDB
 
-MongoDB se usa como capa operativa. Cada contrato se guarda como una ficha con
-datos basicos, entidad, proveedor, territorio, ejecucion, adiciones, texto y
-prioridad.
+Cada contrato debe quedar como una ficha. Eso es lo que hace util a MongoDB: el
+usuario consulta un contrato sin reconstruir todas las uniones.
+
+**Evidencia:** un documento JSON de ejemplo con texto, temas y prioridad.
     """),
     code("""
 def limpiar_nan(valor):
@@ -653,26 +562,18 @@ def limpiar_nan(valor):
         return valor.item()
     return valor
 
-def contrato_a_documento(row, lote):
+def contrato_documento(row, lote):
     return {
-        "_id": row.get("id_contrato"),
-        "id_contrato": row.get("id_contrato"),
+        "_id": row["id_contrato"],
+        "id_contrato": row["id_contrato"],
         "lote": lote,
         "fecha_ingesta": datetime.now(timezone.utc).isoformat(),
-        "objeto": limpiar_nan(row.get("objeto_del_contrato")),
         "valor": limpiar_nan(row.get("valor_del_contrato")),
-        "valor_pagado": limpiar_nan(row.get("valor_pagado")),
-        "fechas": {
-            "firma": limpiar_nan(row.get("fecha_de_firma")),
-            "inicio": limpiar_nan(row.get("fecha_de_inicio_del_contrato")),
-            "fin": limpiar_nan(row.get("fecha_de_fin_del_contrato")),
-            "ultima_actualizacion": limpiar_nan(row.get("ultima_actualizacion")),
-        },
+        "objeto": limpiar_nan(row.get("objeto_del_contrato")),
         "entidad": {
             "nombre": limpiar_nan(row.get("nombre_entidad")),
             "nit": limpiar_nan(row.get("nit_entidad")),
             "sector": limpiar_nan(row.get("sector")),
-            "orden": limpiar_nan(row.get("orden")),
         },
         "proveedor": {
             "nombre": limpiar_nan(row.get("proveedor_adjudicado")),
@@ -685,24 +586,17 @@ def contrato_a_documento(row, lote):
             "latitud": limpiar_nan(row.get("latitud_num")),
             "longitud": limpiar_nan(row.get("longitud_num")),
         },
-        "contratacion": {
-            "tipo": limpiar_nan(row.get("tipo_de_contrato")),
-            "modalidad": limpiar_nan(row.get("modalidad_de_contratacion")),
-            "estado": limpiar_nan(row.get("estado_contrato")),
+        "adiciones": {
+            "numero": limpiar_nan(row.get("numero_adiciones")),
+            "ultima": limpiar_nan(row.get("ultima_adicion")),
+            "descripcion": limpiar_nan(row.get("descripcion_adiciones")),
         },
         "ejecucion": {
             "avance_real": limpiar_nan(row.get("ultimo_avance_real")),
             "estado": limpiar_nan(row.get("estado_ejecucion")),
-            "ultima_fecha": limpiar_nan(row.get("ultima_fecha_ejecucion")),
-        },
-        "adiciones": {
-            "numero": limpiar_nan(row.get("numero_adiciones")),
-            "ultima": limpiar_nan(row.get("ultima_adicion")),
-            "tipos": limpiar_nan(row.get("tipos_adicion")),
-            "descripciones": limpiar_nan(row.get("descripcion_adiciones")),
         },
         "texto_no_estructurado": {
-            "objeto_limpio": limpiar_nan(row.get("texto_contrato_limpio")),
+            "texto_busqueda": limpiar_nan(row.get("texto_busqueda")),
             "temas_detectados": limpiar_nan(row.get("temas_detectados")),
         },
         "prioridad": {
@@ -712,33 +606,26 @@ def contrato_a_documento(row, lote):
         "estado_revision": "pendiente",
     }
 
-documentos_lote_1 = [
-    contrato_a_documento(row, "lote_1")
-    for _, row in contratos_scored_1.iterrows()
+docs_lote_1 = [
+    contrato_documento(row, "lote_1")
+    for _, row in lote_1_scored.iterrows()
     if pd.notna(row.get("id_contrato"))
 ]
 
-documentos_lote_1[0]
-    """),
-    md("""
-## Verificacion docente de la etapa 8
-
-Revisar un documento de ejemplo. Debe contener `texto_no_estructurado`,
-`temas_detectados`, `prioridad`, `adiciones` y `ejecucion`.
+docs_lote_1[0]
     """),
     md("""
 ---
-# Etapa 9. Carga a MongoDB
+# Reto 8. Cargar MongoDB o generar respaldo JSON
 
-Configura `MONGODB_URI` como variable de entorno si usaras Atlas. Si no hay
-MongoDB disponible, el notebook genera archivos JSON de respaldo para revisar
-la estructura. Para la entrega final, el equipo debe mostrar la carga real o
-justificar la limitacion del entorno.
+Si tienen MongoDB Atlas o local, carguen con `upsert`. Si no, generen JSON y
+carguen MongoDB antes de la sustentacion.
+
+**Evidencia:** conteos de carga o archivo JSON de respaldo.
     """),
     code("""
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 DB_NAME = "observatorio_secop_2021"
-
 mongo_ok = False
 db = None
 
@@ -748,70 +635,48 @@ try:
     client.admin.command("ping")
     db = client[DB_NAME]
     mongo_ok = True
-    print("Conexion a MongoDB: OK")
+    print("MongoDB conectado.")
 except Exception as e:
-    print("No se pudo conectar a MongoDB.")
+    print("MongoDB no conectado. Se usara respaldo JSON.")
     print("Detalle:", e)
-    print("Se usaran archivos JSON de respaldo para inspeccion.")
 
-def cargar_contratos_mongo(documentos, etiqueta_lote):
-    if not documentos:
-        return {"documentos": 0, "mongo_ok": mongo_ok}
-
+def cargar_contratos(documentos, lote):
     if mongo_ok:
-        ops = [
-            UpdateOne({"_id": doc["_id"]}, {"$set": doc}, upsert=True)
-            for doc in documentos
-        ]
+        ops = [UpdateOne({"_id": d["_id"]}, {"$set": d}, upsert=True) for d in documentos]
         result = db.contratos_operativos.bulk_write(ops)
         db.metadata_pipeline.insert_one({
-            "lote": etiqueta_lote,
+            "lote": lote,
             "fecha": datetime.now(timezone.utc).isoformat(),
-            "documentos_recibidos": len(documentos),
-            "matched": result.matched_count,
-            "modified": result.modified_count,
-            "upserted": len(result.upserted_ids),
-            "fuente": "SECOP II desde 2021",
-        })
-        return {
             "documentos": len(documentos),
             "matched": result.matched_count,
             "modified": result.modified_count,
             "upserted": len(result.upserted_ids),
-            "mongo_ok": True,
-        }
+        })
+        return {"mongo_ok": True, "documentos": len(documentos), "upserted": len(result.upserted_ids)}
 
-    salida = SALIDA / f"{etiqueta_lote}_contratos_operativos.json"
-    salida.write_text(json.dumps(documentos, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"documentos": len(documentos), "mongo_ok": False, "archivo": str(salida)}
+    ruta = SALIDA / f"{lote}_contratos_operativos.json"
+    ruta.write_text(json.dumps(documentos, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"mongo_ok": False, "documentos": len(documentos), "archivo": str(ruta)}
 
-resultado_lote_1 = cargar_contratos_mongo(documentos_lote_1, "lote_1")
-resultado_lote_1
-    """),
-    md("""
-## Verificacion docente de la etapa 9
-
-Revisar conteos de carga. Si `mongo_ok` es verdadero, debe existir metadata en
-MongoDB. Si no, debe existir el archivo JSON de respaldo y el equipo debe cargar
-MongoDB antes de la entrega final.
+resultado_carga_1 = cargar_contratos(docs_lote_1, "lote_1")
+resultado_carga_1
     """),
     md("""
 ---
-# Etapa 10. Colecciones para dashboard
+# Reto 9. Crear colecciones para dashboard
 
-El dashboard no debe depender de calculos manuales. Se crean colecciones resumen
-para KPIs, entidades, proveedores, temas y alertas.
+El dashboard debe salir de datos preparados, no de calculos improvisados.
+
+**Evidencia:** tablas o colecciones de KPIs, entidades, proveedores, temas y alertas.
     """),
     code("""
-def construir_dashboard_frames(df):
+def frames_dashboard(df):
     kpis = pd.DataFrame([{
         "fecha_calculo": datetime.now(timezone.utc).isoformat(),
         "total_contratos": int(len(df)),
         "valor_total": float(df["valor_del_contrato"].sum()),
-        "contratos_prioridad_alta": int((df["nivel_prioridad"] == "alta").sum()),
         "contratos_con_adiciones": int((df["numero_adiciones"] > 0).sum()),
-        "proveedores_unicos": int(df["documento_proveedor"].nunique()),
-        "entidades_unicas": int(df["nit_entidad"].nunique()),
+        "prioridad_alta": int((df["nivel_prioridad"] == "alta").sum()),
     }])
 
     entidades = (
@@ -820,7 +685,6 @@ def construir_dashboard_frames(df):
             total_contratos=("id_contrato", "count"),
             valor_total=("valor_del_contrato", "sum"),
             prioridad_promedio=("indice_prioridad_revision", "mean"),
-            contratos_con_adiciones=("numero_adiciones", lambda s: int((s > 0).sum())),
         )
         .reset_index()
         .sort_values("valor_total", ascending=False)
@@ -832,7 +696,6 @@ def construir_dashboard_frames(df):
             total_contratos=("id_contrato", "count"),
             valor_total=("valor_del_contrato", "sum"),
             entidades_distintas=("nit_entidad", "nunique"),
-            prioridad_promedio=("indice_prioridad_revision", "mean"),
         )
         .reset_index()
         .sort_values("valor_total", ascending=False)
@@ -840,11 +703,10 @@ def construir_dashboard_frames(df):
 
     temas = resumen_temas(df)
 
-    alertas = df[df["nivel_prioridad"].isin(["media", "alta"])].copy()
-    alertas = alertas[[
-        "id_contrato", "nombre_entidad", "proveedor_adjudicado", "departamento",
-        "ciudad", "valor_del_contrato", "numero_adiciones", "ultimo_avance_real",
-        "indice_prioridad_revision", "nivel_prioridad", "temas_detectados"
+    alertas = df[df["nivel_prioridad"].isin(["media", "alta"])][[
+        "id_contrato", "nombre_entidad", "proveedor_adjudicado",
+        "valor_del_contrato", "numero_adiciones", "temas_detectados",
+        "indice_prioridad_revision", "nivel_prioridad"
     ]].sort_values("indice_prioridad_revision", ascending=False)
 
     return {
@@ -855,174 +717,155 @@ def construir_dashboard_frames(df):
         "alertas_revision": alertas,
     }
 
-dashboard_lote_1 = construir_dashboard_frames(contratos_scored_1)
-for nombre, frame in dashboard_lote_1.items():
+dash_1 = frames_dashboard(lote_1_scored)
+for nombre, frame in dash_1.items():
     print(nombre, frame.shape)
     display(frame.head(5))
     """),
     code("""
-def cargar_dashboard_mongo(frames, etiqueta_lote):
+def guardar_dashboard(frames, lote):
     if mongo_ok:
         for nombre, frame in frames.items():
-            registros = json.loads(frame.to_json(orient="records", date_format="iso", force_ascii=False))
-            db[nombre].delete_many({"lote": etiqueta_lote})
+            registros = json.loads(frame.to_json(orient="records", force_ascii=False, date_format="iso"))
+            db[nombre].delete_many({"lote": lote})
             for r in registros:
-                r["lote"] = etiqueta_lote
+                r["lote"] = lote
                 r["fecha_carga"] = datetime.now(timezone.utc).isoformat()
             if registros:
                 db[nombre].insert_many(registros)
-        return {"mongo_ok": True, "colecciones_actualizadas": list(frames.keys())}
+        return {"mongo_ok": True, "colecciones": list(frames.keys())}
 
-    salidas = {}
+    archivos = {}
     for nombre, frame in frames.items():
-        salida = SALIDA / f"{etiqueta_lote}_{nombre}.json"
-        salida.write_text(frame.to_json(orient="records", force_ascii=False, indent=2), encoding="utf-8")
-        salidas[nombre] = str(salida)
-    return {"mongo_ok": False, "archivos": salidas}
+        ruta = SALIDA / f"{lote}_{nombre}.json"
+        ruta.write_text(frame.to_json(orient="records", force_ascii=False, indent=2), encoding="utf-8")
+        archivos[nombre] = str(ruta)
+    return {"mongo_ok": False, "archivos": archivos}
 
-resultado_dashboard_1 = cargar_dashboard_mongo(dashboard_lote_1, "lote_1")
+resultado_dashboard_1 = guardar_dashboard(dash_1, "lote_1")
 resultado_dashboard_1
     """),
     md("""
-## Verificacion docente de la etapa 10
-
-Revisar que existan datos para `dashboard_kpis`, `dashboard_entidades`,
-`dashboard_proveedores`, `dashboard_temas` y `alertas_revision`.
-    """),
-    md("""
 ---
-# Etapa 11. Segunda carga y actualizacion
+# Reto 10. Ejecutar segunda carga
 
-El segundo lote demuestra comportamiento operativo. No es necesario Airflow para
-validar el taller; se ejecuta desde el notebook. Airflow, cron o Databricks
-Workflows pueden quedar como extension.
+Repitan el proceso con `lote_2`. El dashboard debe cambiar porque entran nuevos
+contratos.
+
+**Evidencia:** comparacion entre lote 1 y lote 2.
     """),
     code("""
-contratos_enriquecidos_2, adiciones_2, ejecucion_2 = enriquecer_lote(contratos_lote_2)
-contratos_texto_2 = agregar_texto_no_estructurado(contratos_enriquecidos_2)
-contratos_scored_2 = calcular_prioridad(contratos_texto_2)
-
-documentos_lote_2 = [
-    contrato_a_documento(row, "lote_2")
-    for _, row in contratos_scored_2.iterrows()
+lote_2_enriquecido, adiciones_2, ejecucion_2 = enriquecer_lote(lote_2)
+lote_2_texto = agregar_texto(lote_2_enriquecido)
+lote_2_scored = calcular_prioridad(lote_2_texto)
+docs_lote_2 = [
+    contrato_documento(row, "lote_2")
+    for _, row in lote_2_scored.iterrows()
     if pd.notna(row.get("id_contrato"))
 ]
 
-resultado_lote_2 = cargar_contratos_mongo(documentos_lote_2, "lote_2")
-dashboard_lote_2 = construir_dashboard_frames(contratos_scored_2)
-resultado_dashboard_2 = cargar_dashboard_mongo(dashboard_lote_2, "lote_2")
+resultado_carga_2 = cargar_contratos(docs_lote_2, "lote_2")
+dash_2 = frames_dashboard(lote_2_scored)
+resultado_dashboard_2 = guardar_dashboard(dash_2, "lote_2")
 
-print("Carga contratos lote 2:", resultado_lote_2)
-print("Carga dashboard lote 2:", resultado_dashboard_2)
-display(contratos_scored_2.sort_values("indice_prioridad_revision", ascending=False).head(10))
+print("Carga lote 2:", resultado_carga_2)
+print("Dashboard lote 2:", resultado_dashboard_2)
+display(lote_2_scored.sort_values("indice_prioridad_revision", ascending=False).head(10))
     """),
     md("""
-## Verificacion docente de la etapa 11
+## Comparacion obligatoria
 
-El profesor debe poder comparar evidencia de `lote_1` y `lote_2`. La entrega
-debe explicar que cambio: nuevos contratos, nuevos temas, nuevas alertas o
-nuevos valores de KPI.
+Completen esta tabla en su informe:
+
+| Indicador | Lote 1 | Lote 2 | Cambio observado |
+|---|---:|---:|---|
+| Total contratos |  |  |  |
+| Valor total |  |  |  |
+| Contratos con adiciones |  |  |  |
+| Prioridad alta |  |  |  |
+| Tema mas frecuente |  |  |  |
     """),
     md("""
 ---
-# Etapa 12. Consultas de negocio
+# Reto 11. Consultas que debe soportar la solucion
 
-Estas consultas muestran que MongoDB actua como capa operativa. Si no hay
-conexion a MongoDB durante la clase, el equipo debe ejecutarlas en su entrega
-final.
+Si MongoDB esta conectado, ejecuten consultas. Si no, expliquen como se harian
+y entreguen evidencia con JSON.
     """),
     code("""
 if mongo_ok:
-    print("Contratos de prioridad alta")
+    print("Contratos con prioridad alta")
     display(pd.DataFrame(list(db.contratos_operativos.find(
         {"prioridad.nivel": "alta"},
         {"_id": 0, "id_contrato": 1, "valor": 1, "entidad.nombre": 1, "proveedor.nombre": 1, "prioridad": 1}
     ).limit(10))))
 
-    print("Top temas detectados")
+    print("Temas detectados")
     display(pd.DataFrame(list(db.dashboard_temas.find({}, {"_id": 0}).sort("total_contratos", -1).limit(10))))
 
-    print("Indice de texto recomendado")
-    print('db.contratos_operativos.create_index([("objeto", "text")])')
-    print('db.contratos_operativos.find({"$text": {"$search": "alimentacion escolar infraestructura"}})')
+    print("Indice de texto recomendado:")
+    print('db.contratos_operativos.create_index([("texto_no_estructurado.texto_busqueda", "text")])')
 else:
-    print("MongoDB no esta conectado en este entorno.")
-    print("Usa los archivos JSON de salidas_taller_final como respaldo, pero ejecuta MongoDB para la entrega final.")
-    """),
-    md("""
-## Verificacion docente de la etapa 12
-
-El equipo debe mostrar al menos tres consultas:
-
-1. contratos de prioridad alta;
-2. temas detectados desde texto no estructurado;
-3. ficha completa de un contrato o proveedor.
+    print("MongoDB no conectado. Revisen archivos en:", SALIDA.resolve())
     """),
     md("""
 ---
-# Dashboard que debe construir el equipo
+# Dashboard minimo
 
-El dashboard debe leer desde MongoDB o desde las colecciones JSON exportadas si
-hay una limitacion temporal del entorno. Para la entrega final se recomienda
-MongoDB Atlas Charts.
+El dashboard debe tener:
 
-Panel minimo:
+1. KPI de contratos cargados.
+2. KPI de valor total.
+3. Tabla de alertas.
+4. Ranking de entidades.
+5. Ranking de proveedores.
+6. Grafico de temas detectados desde texto no estructurado.
+7. Evidencia de actualizacion despues del lote 2.
 
-1. KPIs: total contratos, valor total, contratos con adiciones, prioridad alta.
-2. Alertas: tabla ordenada por indice de prioridad.
-3. Entidades: ranking por valor total y prioridad promedio.
-4. Proveedores: ranking por valor y numero de entidades.
-5. Temas: grafico de `dashboard_temas`.
-6. Evidencia antes/despues: captura del lote 1 y captura posterior al lote 2.
+MongoDB Atlas Charts es recomendado, pero no obligatorio si el equipo demuestra
+otra herramienta conectada a las colecciones o a los JSON generados.
     """),
     md("""
 ---
-# Matriz de verificacion para el profesor
+# Matriz de verificacion del profesor
 
-| Elemento | Evidencia que debe mostrar el equipo | Cumple |
+| Criterio | Evidencia esperada | Cumple |
 |---|---|---|
-| Fuentes desde 2021 | Muestras de contratos, adiciones y ejecucion filtradas |  |
-| Dos lotes | Conteo de `lote_1` y `lote_2` |  |
-| Limpieza | Fechas y valores convertidos |  |
-| Territorio | Cruce con DIVIPOLA y conteo de cruces exitosos |  |
-| Adiciones | `numero_adiciones` por contrato |  |
-| Ejecucion | `ultimo_avance_real` por contrato cuando exista |  |
-| Texto no estructurado | `temas_detectados` y resumen por tema |  |
-| Prioridad | Ranking con reglas explicadas |  |
-| MongoDB | Documentos en `contratos_operativos` o JSON equivalente |  |
+| Fuentes desde 2021 | Muestras filtradas de contratos, adiciones y ejecucion |  |
+| Dos lotes | Conteos de lote 1 y lote 2 |  |
+| Cruce territorial | Conteo de contratos con DIVIPOLA |  |
+| Integracion | Adiciones y avance de ejecucion por contrato |  |
+| Texto no estructurado | `texto_busqueda`, `temas_detectados`, resumen por tema |  |
+| Prioridad | Ranking y reglas explicadas |  |
+| MongoDB/JSON | Documento completo de contrato operativo |  |
 | Dashboard | KPIs, alertas, entidades, proveedores y temas |  |
-| Actualizacion | Comparacion antes/despues de la segunda carga |  |
-| Interpretacion | Informe sin afirmar fraude ni causalidad |  |
-
-Esta matriz se puede usar como lista de chequeo durante la sustentacion.
+| Actualizacion | Comparacion entre lote 1 y lote 2 |  |
+| Interpretacion | No afirma fraude; explica limites |  |
     """),
     md("""
-## Rubrica sugerida
+## Rubrica
 
 | Criterio | Peso |
 |---|---:|
-| Consulta correcta de fuentes desde 2021 | 10% |
-| Integracion de contratos, adiciones, ejecucion y territorio | 15% |
-| Limpieza y calidad de datos | 10% |
-| Uso simple de texto no estructurado | 10% |
-| Indice descriptivo de prioridad | 10% |
-| Modelo documental y carga en MongoDB | 15% |
-| Dashboard operativo con evidencia de actualizacion | 15% |
-| Informe ejecutivo y limites del analisis | 10% |
-| Reproducibilidad de la entrega | 5% |
+| Fuentes y filtro desde 2021 | 10% |
+| Integracion de bases | 15% |
+| Limpieza y calidad | 10% |
+| Uso claro de texto no estructurado | 15% |
+| Indice de prioridad | 10% |
+| MongoDB como capa operativa | 15% |
+| Dashboard y actualizacion | 15% |
+| Informe ejecutivo | 10% |
     """),
     md("""
-## Cierre del taller
+## Cierre del reto
 
-El taller termina cuando el equipo puede demostrar una historia completa:
+La entrega debe convencer al profesor de que el equipo construyo un prototipo
+operativo, no solo un analisis aislado.
 
-1. se conecto a fuentes reales desde 2021;
-2. integro varias bases;
-3. uso texto no estructurado de forma simple;
-4. calculo prioridad descriptiva;
-5. publico fichas y resumenes en MongoDB;
-6. mostro un dashboard que cambia con una segunda carga;
-7. explico que se puede concluir y que no se puede concluir.
+La frase final del informe debe responder:
+
+> Que debe revisar primero una oficina de control interno y que evidencia del
+> pipeline soporta esa recomendacion?
 
 Referencias:
 
